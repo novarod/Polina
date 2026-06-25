@@ -1,0 +1,12 @@
+DROP TABLE IF EXISTS player_mission_states;
+DROP TABLE IF EXISTS organization_api_keys;
+DROP TABLE IF EXISTS mission_versions;
+DROP TABLE IF EXISTS missions;
+DROP TABLE IF EXISTS workspaces;
+DROP TABLE IF EXISTS invites;
+DROP TABLE IF EXISTS members;
+DROP TABLE IF EXISTS organizations;
+DROP TABLE IF EXISTS users;
+DROP TYPE IF EXISTS mission_status;
+DROP TYPE IF EXISTS invite_status;
+DROP TYPE IF EXISTS member_role;
