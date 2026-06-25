@@ -8,17 +8,16 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/novarod/polina/apps/api/internal/ports"
 	"github.com/novarod/polina/apps/api/pkg/apierr"
 )
 
-type UserRepository struct{ pool *pgxpool.Pool }
+type UserRepository struct{ db Querier }
 
-func NewUserRepository(pool *pgxpool.Pool) *UserRepository { return &UserRepository{pool: pool} }
+func NewUserRepository(db Querier) *UserRepository { return &UserRepository{db: db} }
 
 func (r *UserRepository) Create(ctx context.Context, u ports.User) (ports.User, error) {
-	row := r.pool.QueryRow(ctx, `
+	row := r.db.QueryRow(ctx, `
 		INSERT INTO users (id, email, name, password, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $5)
 		RETURNING id, email, name, password, created_at, deleted_at`,
@@ -28,7 +27,7 @@ func (r *UserRepository) Create(ctx context.Context, u ports.User) (ports.User, 
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (ports.User, error) {
-	row := r.pool.QueryRow(ctx, `
+	row := r.db.QueryRow(ctx, `
 		SELECT id, email, name, password, created_at, deleted_at
 		FROM users WHERE email = $1 AND deleted_at IS NULL`,
 		strings.ToLower(email),
@@ -44,7 +43,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (ports.U
 }
 
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (ports.User, error) {
-	row := r.pool.QueryRow(ctx, `
+	row := r.db.QueryRow(ctx, `
 		SELECT id, email, name, password, created_at, deleted_at
 		FROM users WHERE id = $1 AND deleted_at IS NULL`, id,
 	)

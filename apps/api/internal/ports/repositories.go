@@ -45,3 +45,38 @@ type MemberRepository interface {
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	SoftDeleteByOrg(ctx context.Context, orgID uuid.UUID) error
 }
+
+// --- Organization ---
+
+type Organization struct {
+	ID        uuid.UUID
+	Name      string
+	Slug      string
+	CreatedAt time.Time
+	DeletedAt *time.Time
+}
+
+type OrganizationWithRole struct {
+	Organization
+	Role member.Role
+}
+
+type OrganizationRepository interface {
+	Create(ctx context.Context, o Organization) (Organization, error)
+	FindByID(ctx context.Context, id uuid.UUID) (Organization, error)
+	ListByUserID(ctx context.Context, userID uuid.UUID) ([]OrganizationWithRole, error)
+	Update(ctx context.Context, id uuid.UUID, name string) (Organization, error)
+	SoftDelete(ctx context.Context, id uuid.UUID) error
+}
+
+// --- Transactions ---
+
+type Repositories interface {
+	Users() UserRepository
+	Members() MemberRepository
+	Organizations() OrganizationRepository
+}
+
+type TxManager interface {
+	WithinTx(ctx context.Context, fn func(Repositories) error) error
+}
