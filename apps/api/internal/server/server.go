@@ -13,8 +13,9 @@ import (
 
 	"github.com/novarod/polina/apps/api/internal/adapters/http/handler"
 	httpmw "github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
-	"github.com/novarod/polina/apps/api/internal/adapters/postgres/repository"
+	"github.com/novarod/polina/apps/api/internal/adapters/postgres"
 	appauth "github.com/novarod/polina/apps/api/internal/application/auth"
+	apporg "github.com/novarod/polina/apps/api/internal/application/organization"
 )
 
 type Config struct {
@@ -46,16 +47,24 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
 
-	// Repositories
-	userRepo := repository.NewUserRepository(pool)
-	memberRepo := repository.NewMemberRepository(pool)
+	// Store (repositories + transaction manager)
+	store := postgres.NewStore(pool)
+	orgRepo := store.Organizations()
+	memberRepo := store.Members()
 
 	// Use cases
-	registerUC := appauth.NewRegisterUseCase(userRepo, cfg.BcryptRounds)
-	loginUC := appauth.NewLoginUseCase(userRepo, memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+	registerUC := appauth.NewRegisterUseCase(store.Users(), cfg.BcryptRounds)
+	loginUC := appauth.NewLoginUseCase(store.Users(), memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+
+	createOrgUC := apporg.NewCreateUseCase(store)
+	listOrgUC := apporg.NewListUseCase(orgRepo)
+	getOrgUC := apporg.NewGetUseCase(orgRepo, memberRepo)
+	updateOrgUC := apporg.NewUpdateUseCase(orgRepo, memberRepo)
+	deleteOrgUC := apporg.NewDeleteUseCase(store)
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(registerUC, loginUC)
+	orgHandler := handler.NewOrganizationHandler(createOrgUC, listOrgUC, getOrgUC, updateOrgUC, deleteOrgUC)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -77,6 +86,15 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	auth.POST("/register", authHandler.Register, httpmw.RateLimit(5))
 	auth.POST("/login", authHandler.Login, httpmw.RateLimit(5))
 	auth.POST("/logout", authHandler.Logout)
+
+	// Organization routes (authenticated)
+	orgs := e.Group("/organizations")
+	orgs.Use(httpmw.Auth(cfg.JWTSecret))
+	orgs.POST("", orgHandler.Create)
+	orgs.GET("", orgHandler.List)
+	orgs.GET("/:id", orgHandler.Get)
+	orgs.PATCH("/:id", orgHandler.Update)
+	orgs.DELETE("/:id", orgHandler.Delete)
 
 	// Health
 	e.GET("/health", func(c echo.Context) error {
