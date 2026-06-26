@@ -1,0 +1,25 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+  exclusions:
+    generated: lax
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+      - path: internal/server/server\.go
+        text: "SA1019"
+        linters:
+          - staticcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

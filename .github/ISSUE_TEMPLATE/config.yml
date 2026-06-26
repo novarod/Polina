@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Code of Conduct
+    url: https://github.com/novarod/polina/blob/main/.github/CODE_OF_CONDUCT.md
+    about: Please read and follow our Code of Conduct before participating.
+  - name: Security report
+    url: mailto:wendellisboa1@hotmail.com
+    about: Report security vulnerabilities privately by email, not as a public issue.

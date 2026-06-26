@@ -1,2 +1,6 @@
 .claude
 /specs
+
+# Go build output / air hot-reload artifacts
+apps/api/bin/
+apps/api/tmp/
