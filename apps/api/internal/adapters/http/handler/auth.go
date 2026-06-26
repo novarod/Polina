@@ -64,12 +64,15 @@ func (h *AuthHandler) Login(c echo.Context) error {
 }
 
 func (h *AuthHandler) Logout(c echo.Context) error {
+	secure := os.Getenv("ENV") == "production"
 	c.SetCookie(&http.Cookie{
 		Name:     "session",
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteStrictMode,
 	})
 	return c.NoContent(http.StatusNoContent)
 }
