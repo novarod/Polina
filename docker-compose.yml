@@ -1,4 +1,23 @@
 services:
+  api:
+    build:
+      context: apps/api
+      dockerfile: Dockerfile.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "migrate -path db/migrations -database \"$$DATABASE_URL\" up && air -c .air.toml"
+    environment:
+      DATABASE_URL: postgres://polina:polina@postgres:5432/polina?sslmode=disable
+      JWT_SECRET: dev-secret-change-me-please
+      PORT: "8080"
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./apps/api:/app
+    restart: unless-stopped
+
   postgres:
     image: postgres:17-alpine
     environment:

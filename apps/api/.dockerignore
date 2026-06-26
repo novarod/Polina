@@ -1,0 +1,16 @@
+# build output & local artifacts
+bin
+tmp
+
+# vcs & meta
+.git
+.github
+
+# env & secrets (runtime receives env via compose/orchestrator)
+.env
+.env.*
+!.env.example
+
+# misc
+*.md
+.golangci.yml
