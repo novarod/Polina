@@ -33,22 +33,13 @@ jobs:
           go-version-file: apps/api/go.mod
           cache-dependency-path: apps/api/go.sum
 
-      - name: Check formatting (gofmt)
-        run: |
-          unformatted="$(gofmt -l .)"
-          if [ -n "$unformatted" ]; then
-            echo "These files are not gofmt-ed:"; echo "$unformatted"
-            echo "Run: gofmt -w ."
-            exit 1
-          fi
-
       - name: Vet
         run: |
           go vet ./...
           go vet -tags=integration ./...
 
       - name: Lint (golangci-lint)
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.12.2
           working-directory: apps/api

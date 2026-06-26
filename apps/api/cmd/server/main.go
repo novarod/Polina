@@ -24,10 +24,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("init server: %v", err)
 	}
-	defer srv.Close()
 
 	log.Printf("Polina API listening on :%s", cfg.Port)
-	if err := srv.Start(); err != nil {
+	err = srv.Start()
+	srv.Close()
+	if err != nil {
 		log.Fatalf("server: %v", err)
 	}
 }
