@@ -1,0 +1,331 @@
+basePath: /
+definitions:
+  github_com_novarod_polina_apps_api_internal_application_auth.LoginInput:
+    properties:
+      email:
+        type: string
+      organization_id:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  github_com_novarod_polina_apps_api_internal_application_auth.RegisterInput:
+    properties:
+      email:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - email
+    - name
+    - password
+    type: object
+  github_com_novarod_polina_apps_api_internal_application_auth.RegisterOutput:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_novarod_polina_apps_api_internal_application_organization.ListItem:
+    properties:
+      id:
+        format: uuid
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+      slug:
+        type: string
+    type: object
+  internal_adapters_http_handler.createOrgRequest:
+    properties:
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  internal_adapters_http_handler.loginResponse:
+    properties:
+      name:
+        type: string
+      user_id:
+        format: uuid
+        type: string
+    type: object
+  internal_adapters_http_handler.orgResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        format: uuid
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+    type: object
+  internal_adapters_http_handler.updateOrgRequest:
+    properties:
+      name:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Mission-orchestration backend for Unreal Engine 5.
+  title: Polina API
+  version: 0.1.0
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Login payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_novarod_polina_apps_api_internal_application_auth.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.loginResponse'
+        "401":
+          description: invalid credentials
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: not a member of the organization
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Log in
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      responses:
+        "204":
+          description: no content
+      summary: Log out
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Registration payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_novarod_polina_apps_api_internal_application_auth.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_novarod_polina_apps_api_internal_application_auth.RegisterOutput'
+        "422":
+          description: validation error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new user
+      tags:
+      - auth
+  /health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+  /organizations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_novarod_polina_apps_api_internal_application_organization.ListItem'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my organizations
+      tags:
+      - organizations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handler.createOrgRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.orgResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: validation error or slug already in use
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create an organization
+      tags:
+      - organizations
+  /organizations/{id}:
+    delete:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: no content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an organization
+      tags:
+      - organizations
+    get:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.orgResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an organization
+      tags:
+      - organizations
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handler.updateOrgRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.orgResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an organization
+      tags:
+      - organizations
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

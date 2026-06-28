@@ -66,10 +66,10 @@ func (uc *CreateUseCase) Execute(ctx context.Context, in CreateInput) (ports.Org
 // --- List (caller's organizations) ---
 
 type ListItem struct {
-	ID   uuid.UUID   `json:"id"`
+	ID   uuid.UUID   `json:"id" swaggertype:"string" format:"uuid"`
 	Name string      `json:"name"`
 	Slug string      `json:"slug"`
-	Role member.Role `json:"role"`
+	Role member.Role `json:"role" swaggertype:"string"`
 }
 
 type ListUseCase struct{ orgs ports.OrganizationRepository }

@@ -161,7 +161,14 @@ banco real (criar org mais membro admin, delete em cascata, unicidade de slug).
 
 ## Documentação da API
 
-Swagger / OpenAPI está planejado. Hoje há um endpoint de health:
+Em ambientes que não são de produção, a UI interativa do Swagger é servida em:
+
+```
+http://localhost:8080/swagger/index.html
+```
+
+O spec OpenAPI fica em `apps/api/docs/` (gerado por `make generate` com swaggo/swag e checado contra
+drift na CI). Um endpoint de health está sempre disponível:
 
 ```
 GET /health   ->   200 {"status":"ok"}

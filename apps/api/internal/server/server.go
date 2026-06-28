@@ -10,7 +10,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger"
 
+	_ "github.com/novarod/polina/apps/api/docs"
 	"github.com/novarod/polina/apps/api/internal/adapters/http/handler"
 	httpmw "github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
 	"github.com/novarod/polina/apps/api/internal/adapters/postgres"
@@ -26,6 +28,7 @@ type Config struct {
 	Port           string
 	FrontendURL    string
 	ThrottleLimit  int
+	Production     bool
 }
 
 type Server struct {
@@ -97,11 +100,25 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	orgs.DELETE("/:id", orgHandler.Delete)
 
 	// Health
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-	})
+	e.GET("/health", health)
+
+	// API docs (Swagger UI), non-production only
+	if !cfg.Production {
+		e.GET("/swagger/*", echoSwagger.WrapHandler)
+	}
 
 	return &Server{echo: e, pool: pool, port: cfg.Port}, nil
+}
+
+// health reports service liveness.
+//
+// @Summary  Health check
+// @Tags     health
+// @Produce  json
+// @Success  200  {object}  map[string]string
+// @Router   /health [get]
+func health(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (s *Server) Start() error {

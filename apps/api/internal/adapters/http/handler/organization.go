@@ -40,7 +40,7 @@ type updateOrgRequest struct {
 }
 
 type orgResponse struct {
-	ID        uuid.UUID `json:"id"`
+	ID        uuid.UUID `json:"id" swaggertype:"string" format:"uuid"`
 	Name      string    `json:"name"`
 	Slug      string    `json:"slug"`
 	CreatedAt time.Time `json:"created_at"`
@@ -50,6 +50,18 @@ func toOrgResponse(o ports.Organization) orgResponse {
 	return orgResponse{ID: o.ID, Name: o.Name, Slug: o.Slug, CreatedAt: o.CreatedAt}
 }
 
+// Create registers an organization and makes the caller its ADMIN member.
+//
+// @Summary   Create an organization
+// @Tags      organizations
+// @Security  BearerAuth
+// @Accept    json
+// @Produce   json
+// @Param     payload  body      createOrgRequest  true  "Organization payload"
+// @Success   201      {object}  orgResponse
+// @Failure   401      {object}  map[string]string
+// @Failure   422      {object}  map[string]string  "validation error or slug already in use"
+// @Router    /organizations [post]
 func (h *OrganizationHandler) Create(c echo.Context) error {
 	claims := httpmw.MustGetClaims(c)
 	var req createOrgRequest
@@ -67,6 +79,15 @@ func (h *OrganizationHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, toOrgResponse(org))
 }
 
+// List returns the organizations the caller is an active member of.
+//
+// @Summary   List my organizations
+// @Tags      organizations
+// @Security  BearerAuth
+// @Produce   json
+// @Success   200  {array}   apporg.ListItem
+// @Failure   401  {object}  map[string]string
+// @Router    /organizations [get]
 func (h *OrganizationHandler) List(c echo.Context) error {
 	claims := httpmw.MustGetClaims(c)
 	items, err := h.list.Execute(c.Request().Context(), claims.UserID)
@@ -76,6 +97,17 @@ func (h *OrganizationHandler) List(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
+// Get returns one organization the caller is a member of.
+//
+// @Summary   Get an organization
+// @Tags      organizations
+// @Security  BearerAuth
+// @Produce   json
+// @Param     id   path      string  true  "Organization ID (uuid)"
+// @Success   200  {object}  orgResponse
+// @Failure   403  {object}  map[string]string
+// @Failure   404  {object}  map[string]string
+// @Router    /organizations/{id} [get]
 func (h *OrganizationHandler) Get(c echo.Context) error {
 	claims := httpmw.MustGetClaims(c)
 	id, err := uuid.Parse(c.Param("id"))
@@ -89,6 +121,19 @@ func (h *OrganizationHandler) Get(c echo.Context) error {
 	return c.JSON(http.StatusOK, toOrgResponse(org))
 }
 
+// Update changes an organization's name (ADMIN only; slug is immutable).
+//
+// @Summary   Update an organization
+// @Tags      organizations
+// @Security  BearerAuth
+// @Accept    json
+// @Produce   json
+// @Param     id       path      string            true  "Organization ID (uuid)"
+// @Param     payload  body      updateOrgRequest  true  "Fields to update"
+// @Success   200      {object}  orgResponse
+// @Failure   403      {object}  map[string]string
+// @Failure   404      {object}  map[string]string
+// @Router    /organizations/{id} [patch]
 func (h *OrganizationHandler) Update(c echo.Context) error {
 	claims := httpmw.MustGetClaims(c)
 	id, err := uuid.Parse(c.Param("id"))
@@ -106,6 +151,16 @@ func (h *OrganizationHandler) Update(c echo.Context) error {
 	return c.JSON(http.StatusOK, toOrgResponse(org))
 }
 
+// Delete soft-deletes an organization and its members (ADMIN only).
+//
+// @Summary   Delete an organization
+// @Tags      organizations
+// @Security  BearerAuth
+// @Param     id  path  string  true  "Organization ID (uuid)"
+// @Success   204  "no content"
+// @Failure   403  {object}  map[string]string
+// @Failure   404  {object}  map[string]string
+// @Router    /organizations/{id} [delete]
 func (h *OrganizationHandler) Delete(c echo.Context) error {
 	claims := httpmw.MustGetClaims(c)
 	id, err := uuid.Parse(c.Param("id"))
