@@ -167,6 +167,9 @@ jobs:
           go-version-file: apps/api/go.mod
           cache-dependency-path: apps/api/go.sum
 
+      - name: Download dependencies
+        run: go mod download
+
       - name: Install swag
         run: go install github.com/swaggo/swag/cmd/swag@v1.16.4
 

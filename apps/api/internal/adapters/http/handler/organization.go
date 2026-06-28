@@ -50,8 +50,6 @@ func toOrgResponse(o ports.Organization) orgResponse {
 	return orgResponse{ID: o.ID, Name: o.Name, Slug: o.Slug, CreatedAt: o.CreatedAt}
 }
 
-// Create registers an organization and makes the caller its ADMIN member.
-//
 // @Summary   Create an organization
 // @Tags      organizations
 // @Security  BearerAuth
@@ -79,8 +77,6 @@ func (h *OrganizationHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, toOrgResponse(org))
 }
 
-// List returns the organizations the caller is an active member of.
-//
 // @Summary   List my organizations
 // @Tags      organizations
 // @Security  BearerAuth
@@ -97,8 +93,6 @@ func (h *OrganizationHandler) List(c echo.Context) error {
 	return c.JSON(http.StatusOK, items)
 }
 
-// Get returns one organization the caller is a member of.
-//
 // @Summary   Get an organization
 // @Tags      organizations
 // @Security  BearerAuth
@@ -121,8 +115,6 @@ func (h *OrganizationHandler) Get(c echo.Context) error {
 	return c.JSON(http.StatusOK, toOrgResponse(org))
 }
 
-// Update changes an organization's name (ADMIN only; slug is immutable).
-//
 // @Summary   Update an organization
 // @Tags      organizations
 // @Security  BearerAuth
@@ -151,8 +143,6 @@ func (h *OrganizationHandler) Update(c echo.Context) error {
 	return c.JSON(http.StatusOK, toOrgResponse(org))
 }
 
-// Delete soft-deletes an organization and its members (ADMIN only).
-//
 // @Summary   Delete an organization
 // @Tags      organizations
 // @Security  BearerAuth

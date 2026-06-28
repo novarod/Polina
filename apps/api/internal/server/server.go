@@ -110,8 +110,6 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	return &Server{echo: e, pool: pool, port: cfg.Port}, nil
 }
 
-// health reports service liveness.
-//
 // @Summary  Health check
 // @Tags     health
 // @Produce  json

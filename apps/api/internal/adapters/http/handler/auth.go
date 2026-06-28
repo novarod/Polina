@@ -25,8 +25,6 @@ type loginResponse struct {
 	Name   string    `json:"name"`
 }
 
-// Register creates a new user account.
-//
 // @Summary  Register a new user
 // @Tags     auth
 // @Accept   json
@@ -47,8 +45,6 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	return c.JSON(http.StatusCreated, out)
 }
 
-// Login authenticates a user and sets the session cookie.
-//
 // @Summary  Log in
 // @Tags     auth
 // @Accept   json
@@ -87,8 +83,6 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	return c.JSON(http.StatusOK, loginResponse{UserID: out.UserID, Name: out.Name})
 }
 
-// Logout clears the session cookie.
-//
 // @Summary  Log out
 // @Tags     auth
 // @Success  204  "no content"
