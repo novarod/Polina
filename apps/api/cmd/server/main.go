@@ -28,6 +28,10 @@ func main() {
 		Production:     os.Getenv("ENV") == "production",
 	}
 
+	if len(cfg.JWTSecret) < 32 {
+		log.Fatalf("JWT_SECRET must be at least 32 bytes (got %d)", len(cfg.JWTSecret))
+	}
+
 	srv, err := server.New(context.Background(), cfg)
 	if err != nil {
 		log.Fatalf("init server: %v", err)

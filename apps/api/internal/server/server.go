@@ -66,11 +66,15 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	deleteOrgUC := apporg.NewDeleteUseCase(store)
 
 	// Handlers
-	authHandler := handler.NewAuthHandler(registerUC, loginUC)
+	authHandler := handler.NewAuthHandler(registerUC, loginUC, handler.CookieConfig{
+		Secure:      cfg.Production,
+		ExpiryHours: cfg.JWTExpiryHours,
+	})
 	orgHandler := handler.NewOrganizationHandler(createOrgUC, listOrgUC, getOrgUC, updateOrgUC, deleteOrgUC)
 
 	e := echo.New()
 	e.HideBanner = true
+	e.IPExtractor = echo.ExtractIPDirect()
 	e.Validator = &echoValidator{v: validator.New()}
 	e.HTTPErrorHandler = errorHandler
 

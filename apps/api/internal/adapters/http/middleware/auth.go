@@ -5,18 +5,10 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/novarod/polina/apps/api/internal/domain/member"
-)
 
-type Claims struct {
-	UserID   uuid.UUID   `json:"user_id"`
-	MemberID uuid.UUID   `json:"member_id"`
-	OrgID    uuid.UUID   `json:"org_id"`
-	Role     member.Role `json:"role"`
-	jwt.RegisteredClaims
-}
+	"github.com/novarod/polina/apps/api/internal/application/token"
+)
 
 const claimsKey = "claims"
 
@@ -32,14 +24,14 @@ func Auth(jwtSecret string) echo.MiddlewareFunc {
 				cookie = &http.Cookie{Value: strings.TrimPrefix(header, "Bearer ")}
 			}
 
-			claims := &Claims{}
-			token, err := jwt.ParseWithClaims(cookie.Value, claims, func(t *jwt.Token) (any, error) {
+			claims := &token.Claims{}
+			tok, err := jwt.ParseWithClaims(cookie.Value, claims, func(t *jwt.Token) (any, error) {
 				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, echo.NewHTTPError(http.StatusUnauthorized, "invalid signing method")
 				}
 				return []byte(jwtSecret), nil
 			})
-			if err != nil || !token.Valid {
+			if err != nil || !tok.Valid {
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired session")
 			}
 
@@ -49,8 +41,8 @@ func Auth(jwtSecret string) echo.MiddlewareFunc {
 	}
 }
 
-func MustGetClaims(c echo.Context) *Claims {
-	claims, ok := c.Get(claimsKey).(*Claims)
+func MustGetClaims(c echo.Context) *token.Claims {
+	claims, ok := c.Get(claimsKey).(*token.Claims)
 	if !ok || claims == nil {
 		panic("auth middleware not applied: claims missing from context")
 	}

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/novarod/polina/apps/api/pkg/hash"
 	"golang.org/x/time/rate"
 )
 
@@ -58,24 +57,6 @@ func RateLimit(requestsPerMin int) echo.MiddlewareFunc {
 			key := c.RealIP()
 			if !store.get(key, r, requestsPerMin).Allow() {
 				return echo.NewHTTPError(http.StatusTooManyRequests, "rate limit exceeded")
-			}
-			return next(c)
-		}
-	}
-}
-
-func EngineRateLimit(requestsPerMin int) echo.MiddlewareFunc {
-	store := newLimiterStore()
-	r := rate.Every(time.Minute / time.Duration(requestsPerMin))
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			apiKey := c.Request().Header.Get("x-api-key")
-			if apiKey == "" {
-				return echo.NewHTTPError(http.StatusUnauthorized, "missing x-api-key")
-			}
-			key := hash.APIKey(apiKey)
-			if !store.get(key, r, requestsPerMin).Allow() {
-				return echo.NewHTTPError(http.StatusTooManyRequests, "engine rate limit exceeded")
 			}
 			return next(c)
 		}

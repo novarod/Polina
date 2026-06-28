@@ -39,10 +39,6 @@ type Member struct {
 type MemberRepository interface {
 	Create(ctx context.Context, m Member) (Member, error)
 	FindByUserAndOrg(ctx context.Context, userID, orgID uuid.UUID) (Member, error)
-	FindByID(ctx context.Context, id uuid.UUID) (Member, error)
-	ListByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]Member, int, error)
-	UpdateRole(ctx context.Context, id uuid.UUID, role member.Role) (Member, error)
-	SoftDelete(ctx context.Context, id uuid.UUID) error
 	SoftDeleteByOrg(ctx context.Context, orgID uuid.UUID) error
 }
 

@@ -2,8 +2,6 @@ package handler
 
 import (
 	"net/http"
-	"os"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,13 +9,19 @@ import (
 	appauth "github.com/novarod/polina/apps/api/internal/application/auth"
 )
 
+type CookieConfig struct {
+	Secure      bool
+	ExpiryHours int
+}
+
 type AuthHandler struct {
 	register *appauth.RegisterUseCase
 	login    *appauth.LoginUseCase
+	cookie   CookieConfig
 }
 
-func NewAuthHandler(register *appauth.RegisterUseCase, login *appauth.LoginUseCase) *AuthHandler {
-	return &AuthHandler{register: register, login: login}
+func NewAuthHandler(register *appauth.RegisterUseCase, login *appauth.LoginUseCase, cookie CookieConfig) *AuthHandler {
+	return &AuthHandler{register: register, login: login, cookie: cookie}
 }
 
 type loginResponse struct {
@@ -64,19 +68,13 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		return mapError(err)
 	}
 
-	secure := os.Getenv("ENV") == "production"
-	expiryH, _ := strconv.Atoi(os.Getenv("JWT_EXPIRY_HOURS"))
-	if expiryH == 0 {
-		expiryH = 24
-	}
-
 	c.SetCookie(&http.Cookie{
 		Name:     "session",
 		Value:    out.Token,
 		Path:     "/",
-		Expires:  time.Now().Add(time.Duration(expiryH) * time.Hour),
+		Expires:  time.Now().Add(time.Duration(h.cookie.ExpiryHours) * time.Hour),
 		HttpOnly: true,
-		Secure:   secure,
+		Secure:   h.cookie.Secure,
 		SameSite: http.SameSiteStrictMode,
 	})
 
@@ -88,14 +86,13 @@ func (h *AuthHandler) Login(c echo.Context) error {
 // @Success  204  "no content"
 // @Router   /auth/logout [post]
 func (h *AuthHandler) Logout(c echo.Context) error {
-	secure := os.Getenv("ENV") == "production"
 	c.SetCookie(&http.Cookie{
 		Name:     "session",
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		Secure:   secure,
+		Secure:   h.cookie.Secure,
 		SameSite: http.SameSiteStrictMode,
 	})
 	return c.NoContent(http.StatusNoContent)

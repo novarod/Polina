@@ -32,16 +32,6 @@ func (f *fakeMemberRepo) FindByUserAndOrg(_ context.Context, _, _ uuid.UUID) (po
 func (f *fakeMemberRepo) Create(_ context.Context, m ports.Member) (ports.Member, error) {
 	return m, nil
 }
-func (f *fakeMemberRepo) FindByID(_ context.Context, _ uuid.UUID) (ports.Member, error) {
-	return ports.Member{}, nil
-}
-func (f *fakeMemberRepo) ListByOrg(_ context.Context, _ uuid.UUID, _, _ int) ([]ports.Member, int, error) {
-	return nil, 0, nil
-}
-func (f *fakeMemberRepo) UpdateRole(_ context.Context, _ uuid.UUID, _ member.Role) (ports.Member, error) {
-	return ports.Member{}, nil
-}
-func (f *fakeMemberRepo) SoftDelete(_ context.Context, _ uuid.UUID) error      { return nil }
 func (f *fakeMemberRepo) SoftDeleteByOrg(_ context.Context, _ uuid.UUID) error { return nil }
 
 func forbiddenCode(t *testing.T, err error) int {

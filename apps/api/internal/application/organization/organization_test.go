@@ -81,16 +81,6 @@ func (f *fakeMemberRepo) FindByUserAndOrg(_ context.Context, _, _ uuid.UUID) (po
 	}
 	return f.found, nil
 }
-func (f *fakeMemberRepo) FindByID(_ context.Context, _ uuid.UUID) (ports.Member, error) {
-	return ports.Member{}, nil
-}
-func (f *fakeMemberRepo) ListByOrg(_ context.Context, _ uuid.UUID, _, _ int) ([]ports.Member, int, error) {
-	return nil, 0, nil
-}
-func (f *fakeMemberRepo) UpdateRole(_ context.Context, _ uuid.UUID, _ member.Role) (ports.Member, error) {
-	return ports.Member{}, nil
-}
-func (f *fakeMemberRepo) SoftDelete(_ context.Context, _ uuid.UUID) error { return nil }
 func (f *fakeMemberRepo) SoftDeleteByOrg(_ context.Context, orgID uuid.UUID) error {
 	f.softDeletedByOrg = append(f.softDeletedByOrg, orgID)
 	return nil

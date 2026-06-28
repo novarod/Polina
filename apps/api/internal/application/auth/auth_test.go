@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 
-	httpmw "github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
 	appauth "github.com/novarod/polina/apps/api/internal/application/auth"
+	"github.com/novarod/polina/apps/api/internal/application/token"
 	"github.com/novarod/polina/apps/api/internal/domain/member"
 	"github.com/novarod/polina/apps/api/internal/ports"
 	"github.com/novarod/polina/apps/api/pkg/apierr"
@@ -78,19 +78,6 @@ func (f *fakeMemberRepo) FindByUserAndOrg(_ context.Context, _, _ uuid.UUID) (po
 	return f.member, nil
 }
 
-func (f *fakeMemberRepo) FindByID(_ context.Context, _ uuid.UUID) (ports.Member, error) {
-	return ports.Member{}, nil
-}
-
-func (f *fakeMemberRepo) ListByOrg(_ context.Context, _ uuid.UUID, _, _ int) ([]ports.Member, int, error) {
-	return nil, 0, nil
-}
-
-func (f *fakeMemberRepo) UpdateRole(_ context.Context, _ uuid.UUID, _ member.Role) (ports.Member, error) {
-	return ports.Member{}, nil
-}
-
-func (f *fakeMemberRepo) SoftDelete(_ context.Context, _ uuid.UUID) error      { return nil }
 func (f *fakeMemberRepo) SoftDeleteByOrg(_ context.Context, _ uuid.UUID) error { return nil }
 
 // --- helpers ---
@@ -102,9 +89,9 @@ func storedUser(t *testing.T, email, password string) ports.User {
 	return ports.User{ID: uuid.New(), Email: email, Name: "Alice", Password: string(hash)}
 }
 
-func parseClaims(t *testing.T, tokenStr, secret string) *httpmw.Claims {
+func parseClaims(t *testing.T, tokenStr, secret string) *token.Claims {
 	t.Helper()
-	claims := &httpmw.Claims{}
+	claims := &token.Claims{}
 	tok, err := jwt.ParseWithClaims(tokenStr, claims, func(*jwt.Token) (any, error) {
 		return []byte(secret), nil
 	})

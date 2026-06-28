@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/novarod/polina/apps/api/internal/adapters/http/handler"
-	httpmw "github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
 	apporg "github.com/novarod/polina/apps/api/internal/application/organization"
+	"github.com/novarod/polina/apps/api/internal/application/token"
 	"github.com/novarod/polina/apps/api/internal/domain/member"
 	"github.com/novarod/polina/apps/api/internal/ports"
 	"github.com/novarod/polina/apps/api/pkg/apierr"
@@ -56,16 +56,6 @@ func (f *fakeMemberRepo) Create(_ context.Context, m ports.Member) (ports.Member
 func (f *fakeMemberRepo) FindByUserAndOrg(_ context.Context, _, _ uuid.UUID) (ports.Member, error) {
 	return f.found, f.findErr
 }
-func (f *fakeMemberRepo) FindByID(_ context.Context, _ uuid.UUID) (ports.Member, error) {
-	return ports.Member{}, nil
-}
-func (f *fakeMemberRepo) ListByOrg(_ context.Context, _ uuid.UUID, _, _ int) ([]ports.Member, int, error) {
-	return nil, 0, nil
-}
-func (f *fakeMemberRepo) UpdateRole(_ context.Context, _ uuid.UUID, _ member.Role) (ports.Member, error) {
-	return ports.Member{}, nil
-}
-func (f *fakeMemberRepo) SoftDelete(_ context.Context, _ uuid.UUID) error      { return nil }
 func (f *fakeMemberRepo) SoftDeleteByOrg(_ context.Context, _ uuid.UUID) error { return nil }
 
 type fakeRepos struct {
@@ -121,7 +111,7 @@ func newCtx(t *testing.T, method, target, body string, userID uuid.UUID) (echo.C
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	c.Set("claims", &httpmw.Claims{UserID: userID})
+	c.Set("claims", &token.Claims{UserID: userID})
 	return c, rec
 }
 
