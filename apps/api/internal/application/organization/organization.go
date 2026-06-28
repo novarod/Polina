@@ -1,5 +1,3 @@
-// Package organization holds the application use cases for the organization
-// (tenant) module.
 package organization
 
 import (
@@ -23,8 +21,6 @@ type CreateInput struct {
 	Slug   string
 }
 
-// CreateUseCase creates an organization and, in the same transaction, makes the
-// creator an ADMIN member.
 type CreateUseCase struct{ tx ports.TxManager }
 
 func NewCreateUseCase(tx ports.TxManager) *CreateUseCase { return &CreateUseCase{tx: tx} }
@@ -143,10 +139,6 @@ type DeleteUseCase struct{ tx ports.TxManager }
 
 func NewDeleteUseCase(tx ports.TxManager) *DeleteUseCase { return &DeleteUseCase{tx: tx} }
 
-// Execute runs existence check, authorization and the cascade inside a single
-// transaction, so a concurrent delete cannot slip between the check and the
-// writes (no TOCTOU). Returns 404 if the org is gone, 403 if the caller is not
-// an ADMIN member.
 func (uc *DeleteUseCase) Execute(ctx context.Context, userID, orgID uuid.UUID) error {
 	return uc.tx.WithinTx(ctx, func(r ports.Repositories) error {
 		if _, err := r.Organizations().FindByID(ctx, orgID); err != nil {

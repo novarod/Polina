@@ -8,7 +8,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
+
+	"github.com/novarod/polina/apps/api/internal/application/token"
 	"github.com/novarod/polina/apps/api/internal/domain/member"
 	"github.com/novarod/polina/apps/api/internal/ports"
 	"github.com/novarod/polina/apps/api/pkg/apierr"
@@ -50,7 +51,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, in LoginInput) (LoginOutput
 		return LoginOutput{}, apierr.ErrBadLogin
 	}
 
-	claims := &middleware.Claims{
+	claims := &token.Claims{
 		UserID: user.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Duration(uc.expiryH) * time.Hour)),
@@ -71,8 +72,8 @@ func (uc *LoginUseCase) Execute(ctx context.Context, in LoginInput) (LoginOutput
 		claims.Role = member.Role("")
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(uc.jwtSecret))
+	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := tok.SignedString([]byte(uc.jwtSecret))
 	if err != nil {
 		return LoginOutput{}, fmt.Errorf("login: sign token: %w", err)
 	}

@@ -20,10 +20,6 @@ linters:
         text: "SA1019"
         linters:
           - staticcheck
-      # Session cookies set `Secure` conditionally on the environment so local
-      # dev works over http; gosec G124 can't prove that, so scope it to the
-      # cookie sites. The middleware case reads the bearer token from a header
-      # into a temporary cookie struct, it is never sent to the client.
       - path: internal/adapters/http/handler/auth\.go
         text: "G124"
         linters:

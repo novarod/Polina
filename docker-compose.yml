@@ -9,7 +9,7 @@ services:
     command: sh -c "migrate -path db/migrations -database \"$$DATABASE_URL\" up && air -c .air.toml"
     environment:
       DATABASE_URL: postgres://polina:polina@postgres:5432/polina?sslmode=disable
-      JWT_SECRET: dev-secret-change-me-please
+      JWT_SECRET: dev-only-secret-change-me-please-0123456789
       PORT: "8080"
       FRONTEND_URL: http://localhost:3000
     ports:

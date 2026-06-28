@@ -1,6 +1,5 @@
 version: 2
 updates:
-  # Forçar atualização de Go: alterado limite e removido o group temporariamente
   - package-ecosystem: gomod
     directory: /apps/api
     schedule:
@@ -24,7 +23,6 @@ updates:
           - minor
           - patch
 
-  # Forçar atualização de Docker: comentário inserido para mudar o hash do ficheiro
   - package-ecosystem: docker
     directory: /apps/api
     schedule:
@@ -40,7 +38,6 @@ updates:
       prefix: chore(docker)
       include: scope
 
-  # Forçar atualização de GitHub Actions: comentário inserido para reavivar a execução
   - package-ecosystem: github-actions
     directory: /
     schedule:

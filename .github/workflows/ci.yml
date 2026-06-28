@@ -144,7 +144,7 @@ jobs:
           cache-dependency-path: apps/api/go.sum
 
       - name: Install golang-migrate
-        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
 
       - name: Migrate up
         run: migrate -path db/migrations -database "$DB_URL" up

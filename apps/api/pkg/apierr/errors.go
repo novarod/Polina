@@ -10,13 +10,7 @@ type AppError struct {
 
 func (e *AppError) Error() string { return e.Message }
 
-var (
-	ErrNotFound     = &AppError{Code: http.StatusNotFound, Message: "resource not found"}
-	ErrUnauthorized = &AppError{Code: http.StatusUnauthorized, Message: "unauthorized"}
-	ErrForbidden    = &AppError{Code: http.StatusForbidden, Message: "forbidden"}
-	ErrBadLogin     = &AppError{Code: http.StatusUnauthorized, Message: "invalid email or password"}
-	ErrConflict     = &AppError{Code: http.StatusConflict, Message: "resource already exists"}
-)
+var ErrBadLogin = &AppError{Code: http.StatusUnauthorized, Message: "invalid email or password"}
 
 func Validation(field, message string) *AppError {
 	return &AppError{Code: http.StatusUnprocessableEntity, Field: field, Message: message}

@@ -44,65 +44,6 @@ func (r *MemberRepository) FindByUserAndOrg(ctx context.Context, userID, orgID u
 	return m, nil
 }
 
-func (r *MemberRepository) FindByID(ctx context.Context, id uuid.UUID) (ports.Member, error) {
-	row := r.db.QueryRow(ctx, `
-		SELECT id, user_id, organization_id, role, created_at, deleted_at
-		FROM members WHERE id = $1 AND deleted_at IS NULL`, id,
-	)
-	m, err := scanMember(row)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return ports.Member{}, apierr.NotFound("member")
-		}
-		return ports.Member{}, fmt.Errorf("member.FindByID: %w", err)
-	}
-	return m, nil
-}
-
-func (r *MemberRepository) ListByOrg(ctx context.Context, orgID uuid.UUID, limit, offset int) ([]ports.Member, int, error) {
-	rows, err := r.db.Query(ctx, `
-		SELECT id, user_id, organization_id, role, created_at, deleted_at
-		FROM members WHERE organization_id = $1 AND deleted_at IS NULL
-		ORDER BY created_at ASC LIMIT $2 OFFSET $3`,
-		orgID, limit, offset,
-	)
-	if err != nil {
-		return nil, 0, fmt.Errorf("member.ListByOrg: %w", err)
-	}
-	defer rows.Close()
-
-	var members []ports.Member
-	for rows.Next() {
-		m, err := scanMember(rows)
-		if err != nil {
-			return nil, 0, err
-		}
-		members = append(members, m)
-	}
-
-	var total int
-	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM members WHERE organization_id = $1 AND deleted_at IS NULL`, orgID).Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("member.ListByOrg count: %w", err)
-	}
-
-	return members, total, nil
-}
-
-func (r *MemberRepository) UpdateRole(ctx context.Context, id uuid.UUID, role member.Role) (ports.Member, error) {
-	row := r.db.QueryRow(ctx, `
-		UPDATE members SET role = $1, updated_at = NOW()
-		WHERE id = $2 AND deleted_at IS NULL
-		RETURNING id, user_id, organization_id, role, created_at, deleted_at`,
-		string(role), id,
-	)
-	return scanMember(row)
-}
-
-func (r *MemberRepository) SoftDelete(ctx context.Context, id uuid.UUID) error {
-	_, err := r.db.Exec(ctx, `UPDATE members SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL`, id)
-	return err
-}
-
 func (r *MemberRepository) SoftDeleteByOrg(ctx context.Context, orgID uuid.UUID) error {
 	_, err := r.db.Exec(ctx, `UPDATE members SET deleted_at = NOW() WHERE organization_id = $1 AND deleted_at IS NULL`, orgID)
 	return err
