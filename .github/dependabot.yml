@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # Forçar atualização de Go: alterado limite e removido o group temporariamente
   - package-ecosystem: gomod
     directory: /apps/api
     schedule:
