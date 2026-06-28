@@ -151,3 +151,27 @@ jobs:
 
       - name: Migrate down (verify reversibility)
         run: migrate -path db/migrations -database "$DB_URL" down -all
+
+  swagger:
+    name: Swagger Docs Drift
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Install swag
+        run: go install github.com/swaggo/swag/cmd/swag@v1.16.4
+
+      - name: Regenerate OpenAPI docs
+        run: swag init -g cmd/server/main.go -o docs --parseInternal --parseDependency --parseDepth 2
+
+      - name: Check for drift
+        run: git diff --exit-code docs/

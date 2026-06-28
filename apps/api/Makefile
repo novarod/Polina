@@ -1,4 +1,4 @@
-.PHONY: run build test test-integration lint migrate migrate-down migrate-create
+.PHONY: run build test test-integration lint generate migrate migrate-down migrate-create
 
 DB_URL ?= postgres://polina:polina@localhost:5432/polina?sslmode=disable
 
@@ -7,6 +7,9 @@ run:
 
 build:
 	go build -o bin/server ./cmd/server
+
+generate:
+	swag init -g cmd/server/main.go -o docs --parseInternal --parseDependency --parseDepth 2
 
 test:
 	go test ./... -race -count=1

@@ -9,6 +9,13 @@ import (
 	"github.com/novarod/polina/apps/api/internal/server"
 )
 
+// @title       Polina API
+// @version     0.1.0
+// @description Mission-orchestration backend for Unreal Engine 5.
+// @BasePath    /
+// @securityDefinitions.apikey BearerAuth
+// @in          header
+// @name        Authorization
 func main() {
 	cfg := server.Config{
 		DBURL:          mustEnv("DATABASE_URL"),
@@ -18,6 +25,7 @@ func main() {
 		Port:           envStr("PORT", "8080"),
 		FrontendURL:    envStr("FRONTEND_URL", "http://localhost:3000"),
 		ThrottleLimit:  envInt("THROTTLE_LIMIT", 30),
+		Production:     os.Getenv("ENV") == "production",
 	}
 
 	srv, err := server.New(context.Background(), cfg)

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	appauth "github.com/novarod/polina/apps/api/internal/application/auth"
 )
@@ -19,6 +20,21 @@ func NewAuthHandler(register *appauth.RegisterUseCase, login *appauth.LoginUseCa
 	return &AuthHandler{register: register, login: login}
 }
 
+type loginResponse struct {
+	UserID uuid.UUID `json:"user_id" swaggertype:"string" format:"uuid"`
+	Name   string    `json:"name"`
+}
+
+// Register creates a new user account.
+//
+// @Summary  Register a new user
+// @Tags     auth
+// @Accept   json
+// @Produce  json
+// @Param    payload  body      appauth.RegisterInput  true  "Registration payload"
+// @Success  201      {object}  appauth.RegisterOutput
+// @Failure  422      {object}  map[string]string  "validation error"
+// @Router   /auth/register [post]
 func (h *AuthHandler) Register(c echo.Context) error {
 	var in appauth.RegisterInput
 	if err := bindAndValidate(c, &in); err != nil {
@@ -31,6 +47,17 @@ func (h *AuthHandler) Register(c echo.Context) error {
 	return c.JSON(http.StatusCreated, out)
 }
 
+// Login authenticates a user and sets the session cookie.
+//
+// @Summary  Log in
+// @Tags     auth
+// @Accept   json
+// @Produce  json
+// @Param    payload  body      appauth.LoginInput  true  "Login payload"
+// @Success  200      {object}  loginResponse
+// @Failure  401      {object}  map[string]string  "invalid credentials"
+// @Failure  403      {object}  map[string]string  "not a member of the organization"
+// @Router   /auth/login [post]
 func (h *AuthHandler) Login(c echo.Context) error {
 	var in appauth.LoginInput
 	if err := bindAndValidate(c, &in); err != nil {
@@ -57,12 +84,15 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		SameSite: http.SameSiteStrictMode,
 	})
 
-	return c.JSON(http.StatusOK, map[string]any{
-		"user_id": out.UserID,
-		"name":    out.Name,
-	})
+	return c.JSON(http.StatusOK, loginResponse{UserID: out.UserID, Name: out.Name})
 }
 
+// Logout clears the session cookie.
+//
+// @Summary  Log out
+// @Tags     auth
+// @Success  204  "no content"
+// @Router   /auth/logout [post]
 func (h *AuthHandler) Logout(c echo.Context) error {
 	secure := os.Getenv("ENV") == "production"
 	c.SetCookie(&http.Cookie{
