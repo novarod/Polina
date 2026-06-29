@@ -18,6 +18,7 @@ import (
 	"github.com/novarod/polina/apps/api/internal/adapters/postgres"
 	appauth "github.com/novarod/polina/apps/api/internal/application/auth"
 	apporg "github.com/novarod/polina/apps/api/internal/application/organization"
+	appws "github.com/novarod/polina/apps/api/internal/application/workspace"
 )
 
 type Config struct {
@@ -65,12 +66,20 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	updateOrgUC := apporg.NewUpdateUseCase(orgRepo, memberRepo)
 	deleteOrgUC := apporg.NewDeleteUseCase(store)
 
+	wsRepo := store.Workspaces()
+	createWsUC := appws.NewCreateUseCase(wsRepo, memberRepo)
+	listWsUC := appws.NewListUseCase(wsRepo, memberRepo)
+	getWsUC := appws.NewGetUseCase(wsRepo, memberRepo)
+	updateWsUC := appws.NewUpdateUseCase(wsRepo, memberRepo)
+	deleteWsUC := appws.NewDeleteUseCase(wsRepo, memberRepo)
+
 	// Handlers
 	authHandler := handler.NewAuthHandler(registerUC, loginUC, handler.CookieConfig{
 		Secure:      cfg.Production,
 		ExpiryHours: cfg.JWTExpiryHours,
 	})
 	orgHandler := handler.NewOrganizationHandler(createOrgUC, listOrgUC, getOrgUC, updateOrgUC, deleteOrgUC)
+	wsHandler := handler.NewWorkspaceHandler(createWsUC, listWsUC, getWsUC, updateWsUC, deleteWsUC)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -102,6 +111,13 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	orgs.GET("/:id", orgHandler.Get)
 	orgs.PATCH("/:id", orgHandler.Update)
 	orgs.DELETE("/:id", orgHandler.Delete)
+
+	// Workspace routes (nested under the organization tenant)
+	orgs.POST("/:id/workspaces", wsHandler.Create)
+	orgs.GET("/:id/workspaces", wsHandler.List)
+	orgs.GET("/:id/workspaces/:workspaceID", wsHandler.Get)
+	orgs.PATCH("/:id/workspaces/:workspaceID", wsHandler.Update)
+	orgs.DELETE("/:id/workspaces/:workspaceID", wsHandler.Delete)
 
 	// Health
 	e.GET("/health", health)

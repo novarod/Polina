@@ -65,6 +65,25 @@ type OrganizationRepository interface {
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 }
 
+// --- Workspace ---
+
+type Workspace struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	Description    string
+	CreatedAt      time.Time
+	DeletedAt      *time.Time
+}
+
+type WorkspaceRepository interface {
+	Create(ctx context.Context, w Workspace) (Workspace, error)
+	FindByID(ctx context.Context, id, orgID uuid.UUID) (Workspace, error)
+	List(ctx context.Context, orgID uuid.UUID) ([]Workspace, error)
+	Update(ctx context.Context, id, orgID uuid.UUID, name, description string) (Workspace, error)
+	SoftDelete(ctx context.Context, id, orgID uuid.UUID) error
+}
+
 // --- Transactions ---
 
 type Repositories interface {

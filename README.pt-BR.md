@@ -24,10 +24,10 @@ o binário do jogo. É construído com Arquitetura Hexagonal (ports e adapters):
 depende de Echo, pgx ou HTTP. As regras de negócio são Go puro, e o framework web, o adapter de
 PostgreSQL e o código de JWT/bcrypt são infraestrutura plugada em interfaces (ports).
 
-Por enquanto o código implementa os domínios **auth**, **user**, **member** e **organization**. Eles
-servem de referência de como os outros módulos (workspace, mission, engine) devem ser construídos. A
-infraestrutura (CI, Docker, migrations, lint, hooks de commit) já está pronta, então adicionar um
-novo domínio não significa refazer a fundação.
+Por enquanto o código implementa os domínios **auth**, **user**, **member**, **organization** e
+**workspace**. Eles servem de referência de como os outros módulos (mission, engine) devem ser
+construídos. A infraestrutura (CI, Docker, migrations, lint, hooks de commit) já está pronta, então
+adicionar um novo domínio não significa refazer a fundação.
 
 ## Arquitetura
 
@@ -40,16 +40,19 @@ apps/api/
 │   ├── domain/             # entidades & regras, sem imports de framework
 │   │   ├── member/         # value object Role (VIEWER < DESIGNER < ADMIN)
 │   │   ├── organization/   # validação de name/slug
-│   │   └── shared/         # paginação
+│   │   ├── shared/         # paginação
+│   │   └── workspace/      # validação de name/description
 │   ├── application/        # use cases (um struct por use case)
 │   │   ├── auth/           # register, login
+│   │   ├── authz/          # autorização escopada por org, reutilizável
 │   │   ├── organization/   # create, list, get, update, delete
-│   │   └── authz/          # autorização escopada por org, reutilizável
+│   │   ├── token/          # claims do JWT (tipo compartilhado emissor/verificador)
+│   │   └── workspace/      # create, list, get, update, delete (escopado por tenant)
 │   ├── ports/              # interfaces de repositório & transação (os ports)
 │   └── adapters/           # o mundo externo
 │       ├── http/           # handlers Echo, middleware (auth, rate limit)
 │       └── postgres/       # repositórios pgx, Store + gerenciador de transação
-├── pkg/                    # apierr, dag (validador de grafo), hash
+├── pkg/                    # apierr
 └── db/migrations/          # SQL do golang-migrate
 ```
 
