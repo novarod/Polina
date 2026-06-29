@@ -1,5 +1,3 @@
-// Package mission holds the application use cases for the mission module
-// (quest graphs inside a workspace). Cycle 1: CRUD + structural graph editing.
 package mission
 
 import (
@@ -16,7 +14,6 @@ import (
 	"github.com/novarod/polina/apps/api/internal/ports"
 )
 
-// emptyGraph is the initial draft graph for a new mission.
 var emptyGraph = json.RawMessage(`{"nodes":[],"edges":[]}`)
 
 // --- Create ---
@@ -44,7 +41,6 @@ func (uc *CreateUseCase) Execute(ctx context.Context, in CreateInput) (ports.Mis
 	if err != nil {
 		return ports.Mission{}, err
 	}
-	// Parent workspace must exist in this org (404 otherwise).
 	if _, err := uc.workspaces.FindByID(ctx, in.WorkspaceID, in.OrgID); err != nil {
 		return ports.Mission{}, err
 	}

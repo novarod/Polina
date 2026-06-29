@@ -80,8 +80,6 @@ func missionParam(c echo.Context) (uuid.UUID, error) {
 	return id, nil
 }
 
-// Create adds a mission to a workspace (DESIGNER+).
-//
 // @Summary   Create a mission
 // @Tags      missions
 // @Security  BearerAuth
@@ -118,8 +116,6 @@ func (h *MissionHandler) Create(c echo.Context) error {
 	return c.JSON(http.StatusCreated, toMissionResponse(m))
 }
 
-// List returns the missions of a workspace (VIEWER+).
-//
 // @Summary   List missions
 // @Tags      missions
 // @Security  BearerAuth
@@ -150,8 +146,6 @@ func (h *MissionHandler) List(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// Get returns one mission including its graph (VIEWER+).
-//
 // @Summary   Get a mission
 // @Tags      missions
 // @Security  BearerAuth
@@ -176,8 +170,6 @@ func (h *MissionHandler) Get(c echo.Context) error {
 	return c.JSON(http.StatusOK, toMissionResponse(m))
 }
 
-// Update changes a mission's name/description (DESIGNER+).
-//
 // @Summary   Update a mission
 // @Tags      missions
 // @Security  BearerAuth
@@ -210,8 +202,6 @@ func (h *MissionHandler) Update(c echo.Context) error {
 	return c.JSON(http.StatusOK, toMissionResponse(m))
 }
 
-// UpdateGraph replaces a mission's quest graph after structural DAG validation (DESIGNER+).
-//
 // @Summary   Update a mission graph
 // @Tags      missions
 // @Security  BearerAuth
@@ -245,8 +235,6 @@ func (h *MissionHandler) UpdateGraph(c echo.Context) error {
 	return c.JSON(http.StatusOK, toMissionResponse(m))
 }
 
-// Delete soft-deletes a mission (DESIGNER+).
-//
 // @Summary   Delete a mission
 // @Tags      missions
 // @Security  BearerAuth
@@ -269,7 +257,6 @@ func (h *MissionHandler) Delete(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-// missionPathParams parses org, workspace and mission ids from the path.
 func missionPathParams(c echo.Context) (orgID, wsID, missionID uuid.UUID, err error) {
 	if orgID, err = orgParam(c); err != nil {
 		return

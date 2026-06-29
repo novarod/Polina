@@ -8,7 +8,6 @@ import (
 	"github.com/novarod/polina/apps/api/pkg/dag"
 )
 
-// Status is the mission lifecycle state (matches the mission_status enum).
 type Status string
 
 const (
@@ -37,9 +36,6 @@ func ValidateDescription(description string) error {
 	return nil
 }
 
-// ValidateGraph parses the raw graph JSON and runs the structural DAG checks
-// (single START, no cycles, no dead-ends, no orphan edges). Returns a 422
-// validation error on malformed JSON or any structural problem.
 func ValidateGraph(raw []byte) error {
 	var g dag.Graph
 	if err := json.Unmarshal(raw, &g); err != nil {
