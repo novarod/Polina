@@ -24,10 +24,10 @@ o binário do jogo. É construído com Arquitetura Hexagonal (ports e adapters):
 depende de Echo, pgx ou HTTP. As regras de negócio são Go puro, e o framework web, o adapter de
 PostgreSQL e o código de JWT/bcrypt são infraestrutura plugada em interfaces (ports).
 
-Por enquanto o código implementa os domínios **auth**, **user**, **member**, **organization** e
-**workspace**. Eles servem de referência de como os outros módulos (mission, engine) devem ser
-construídos. A infraestrutura (CI, Docker, migrations, lint, hooks de commit) já está pronta, então
-adicionar um novo domínio não significa refazer a fundação.
+Por enquanto o código implementa os domínios **auth**, **user**, **member**, **organization**,
+**workspace** e **mission** (core: grafo de quest + validação DAG). O versionamento/publish da mission
+e o endpoint da engine UE5 são o próximo ciclo. A infraestrutura (CI, Docker, migrations, lint, hooks
+de commit) já está pronta, então adicionar um novo domínio não significa refazer a fundação.
 
 ## Arquitetura
 
@@ -39,12 +39,14 @@ apps/api/
 ├── internal/
 │   ├── domain/             # entidades & regras, sem imports de framework
 │   │   ├── member/         # value object Role (VIEWER < DESIGNER < ADMIN)
+│   │   ├── mission/        # validação de name/desc + validação estrutural do grafo (DAG)
 │   │   ├── organization/   # validação de name/slug
 │   │   ├── shared/         # paginação
 │   │   └── workspace/      # validação de name/description
 │   ├── application/        # use cases (um struct por use case)
 │   │   ├── auth/           # register, login
 │   │   ├── authz/          # autorização escopada por org, reutilizável
+│   │   ├── mission/        # create, list, get, update, update-graph, delete
 │   │   ├── organization/   # create, list, get, update, delete
 │   │   ├── token/          # claims do JWT (tipo compartilhado emissor/verificador)
 │   │   └── workspace/      # create, list, get, update, delete (escopado por tenant)
@@ -52,7 +54,7 @@ apps/api/
 │   └── adapters/           # o mundo externo
 │       ├── http/           # handlers Echo, middleware (auth, rate limit)
 │       └── postgres/       # repositórios pgx, Store + gerenciador de transação
-├── pkg/                    # apierr
+├── pkg/                    # apierr, dag (validador de grafo de quest), hash (SHA-256)
 └── db/migrations/          # SQL do golang-migrate
 ```
 

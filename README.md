@@ -24,10 +24,10 @@ recompiling the game binary. It is built with Hexagonal Architecture (ports and 
 layer doesn't depend on Echo, pgx or HTTP. The business rules are plain Go, and the web framework,
 the PostgreSQL adapter and the JWT/bcrypt code are all infrastructure plugged into interfaces (ports).
 
-For now the code implements the **auth**, **user**, **member**, **organization** and **workspace**
-domains. They work as a reference for how the other modules (mission, engine) should be built. The
-infrastructure (CI, Docker, migrations, linting, commit hooks) is already set up, so adding a new
-domain doesn't mean redoing the foundation.
+For now the code implements the **auth**, **user**, **member**, **organization**, **workspace** and
+**mission** (core: quest graph + DAG validation) domains. Mission versioning/publish and the UE5
+engine endpoint are the next cycle. The infrastructure (CI, Docker, migrations, linting, commit hooks)
+is already set up, so adding a new domain doesn't mean redoing the foundation.
 
 ## Architecture
 
@@ -39,12 +39,14 @@ apps/api/
 ├── internal/
 │   ├── domain/             # entities & rules, no framework imports
 │   │   ├── member/         # Role value object (VIEWER < DESIGNER < ADMIN)
+│   │   ├── mission/        # name/desc validation + structural graph (DAG) validation
 │   │   ├── organization/   # name/slug validation
 │   │   ├── shared/         # pagination
 │   │   └── workspace/      # name/description validation
 │   ├── application/        # use cases (one struct per use case)
 │   │   ├── auth/           # register, login
 │   │   ├── authz/          # reusable org-scoped authorization
+│   │   ├── mission/        # create, list, get, update, update-graph, delete
 │   │   ├── organization/   # create, list, get, update, delete
 │   │   ├── token/          # JWT session claims (shared issuer/verifier type)
 │   │   └── workspace/      # create, list, get, update, delete (tenant-scoped)
@@ -52,7 +54,7 @@ apps/api/
 │   └── adapters/           # the outside world
 │       ├── http/           # Echo handlers, middleware (auth, rate limit)
 │       └── postgres/       # pgx repositories, Store + transaction manager
-├── pkg/                    # apierr
+├── pkg/                    # apierr, dag (quest graph validator), hash (SHA-256)
 └── db/migrations/          # golang-migrate SQL
 ```
 

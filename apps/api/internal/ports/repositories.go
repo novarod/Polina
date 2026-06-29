@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
@@ -82,6 +83,31 @@ type WorkspaceRepository interface {
 	List(ctx context.Context, orgID uuid.UUID) ([]Workspace, error)
 	Update(ctx context.Context, id, orgID uuid.UUID, name, description string) (Workspace, error)
 	SoftDelete(ctx context.Context, id, orgID uuid.UUID) error
+}
+
+// --- Mission ---
+
+type Mission struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	WorkspaceID    uuid.UUID
+	Name           string
+	Description    string
+	Status         string
+	ActiveHash     *string
+	Graph          json.RawMessage
+	CreatedByID    uuid.UUID
+	CreatedAt      time.Time
+	DeletedAt      *time.Time
+}
+
+type MissionRepository interface {
+	Create(ctx context.Context, m Mission) (Mission, error)
+	FindByID(ctx context.Context, id, orgID, workspaceID uuid.UUID) (Mission, error)
+	List(ctx context.Context, workspaceID, orgID uuid.UUID) ([]Mission, error)
+	UpdateGraph(ctx context.Context, id, orgID, workspaceID uuid.UUID, graph json.RawMessage) (Mission, error)
+	Update(ctx context.Context, id, orgID, workspaceID uuid.UUID, name, description string) (Mission, error)
+	SoftDelete(ctx context.Context, id, orgID, workspaceID uuid.UUID) error
 }
 
 // --- Transactions ---

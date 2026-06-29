@@ -49,6 +49,13 @@ definitions:
       slug:
         type: string
     type: object
+  internal_adapters_http_handler.createMissionRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
   internal_adapters_http_handler.createOrgRequest:
     properties:
       name:
@@ -71,6 +78,33 @@ definitions:
         format: uuid
         type: string
     type: object
+  internal_adapters_http_handler.missionResponse:
+    properties:
+      active_hash:
+        type: string
+      created_at:
+        type: string
+      created_by_id:
+        format: uuid
+        type: string
+      description:
+        type: string
+      graph:
+        type: object
+      id:
+        format: uuid
+        type: string
+      name:
+        type: string
+      organization_id:
+        format: uuid
+        type: string
+      status:
+        type: string
+      workspace_id:
+        format: uuid
+        type: string
+    type: object
   internal_adapters_http_handler.orgResponse:
     properties:
       created_at:
@@ -81,6 +115,13 @@ definitions:
       name:
         type: string
       slug:
+        type: string
+    type: object
+  internal_adapters_http_handler.updateMissionRequest:
+    properties:
+      description:
+        type: string
+      name:
         type: string
     type: object
   internal_adapters_http_handler.updateOrgRequest:
@@ -532,6 +573,273 @@ paths:
       summary: Update a workspace
       tags:
       - workspaces
+  /organizations/{id}/workspaces/{workspaceID}/missions:
+    get:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_adapters_http_handler.missionResponse'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List missions
+      tags:
+      - missions
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      - description: Mission payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handler.createMissionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.missionResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a mission
+      tags:
+      - missions
+  /organizations/{id}/workspaces/{workspaceID}/missions/{missionID}:
+    delete:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: no content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a mission
+      tags:
+      - missions
+    get:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.missionResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a mission
+      tags:
+      - missions
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handler.updateMissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.missionResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a mission
+      tags:
+      - missions
+  /organizations/{id}/workspaces/{workspaceID}/missions/{missionID}/graph:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      - description: Graph object {nodes, edges}
+        in: body
+        name: payload
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.missionResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: invalid graph
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a mission graph
+      tags:
+      - missions
 securityDefinitions:
   BearerAuth:
     in: header

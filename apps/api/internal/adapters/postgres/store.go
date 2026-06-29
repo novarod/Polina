@@ -22,6 +22,9 @@ func (s *Store) Organizations() ports.OrganizationRepository {
 func (s *Store) Workspaces() ports.WorkspaceRepository {
 	return repository.NewWorkspaceRepository(s.pool)
 }
+func (s *Store) Missions() ports.MissionRepository {
+	return repository.NewMissionRepository(s.pool)
+}
 
 func (s *Store) WithinTx(ctx context.Context, fn func(ports.Repositories) error) (err error) {
 	tx, err := s.pool.Begin(ctx)
