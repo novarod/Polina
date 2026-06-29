@@ -24,8 +24,8 @@ recompiling the game binary. It is built with Hexagonal Architecture (ports and 
 layer doesn't depend on Echo, pgx or HTTP. The business rules are plain Go, and the web framework,
 the PostgreSQL adapter and the JWT/bcrypt code are all infrastructure plugged into interfaces (ports).
 
-For now the code implements the **auth**, **user**, **member** and **organization** domains. They
-work as a reference for how the other modules (workspace, mission, engine) should be built. The
+For now the code implements the **auth**, **user**, **member**, **organization** and **workspace**
+domains. They work as a reference for how the other modules (mission, engine) should be built. The
 infrastructure (CI, Docker, migrations, linting, commit hooks) is already set up, so adding a new
 domain doesn't mean redoing the foundation.
 
@@ -40,16 +40,19 @@ apps/api/
 │   ├── domain/             # entities & rules, no framework imports
 │   │   ├── member/         # Role value object (VIEWER < DESIGNER < ADMIN)
 │   │   ├── organization/   # name/slug validation
-│   │   └── shared/         # pagination
+│   │   ├── shared/         # pagination
+│   │   └── workspace/      # name/description validation
 │   ├── application/        # use cases (one struct per use case)
 │   │   ├── auth/           # register, login
+│   │   ├── authz/          # reusable org-scoped authorization
 │   │   ├── organization/   # create, list, get, update, delete
-│   │   └── authz/          # reusable org-scoped authorization
+│   │   ├── token/          # JWT session claims (shared issuer/verifier type)
+│   │   └── workspace/      # create, list, get, update, delete (tenant-scoped)
 │   ├── ports/              # repository & transaction interfaces (the ports)
 │   └── adapters/           # the outside world
 │       ├── http/           # Echo handlers, middleware (auth, rate limit)
 │       └── postgres/       # pgx repositories, Store + transaction manager
-├── pkg/                    # apierr, dag (graph validator), hash
+├── pkg/                    # apierr
 └── db/migrations/          # golang-migrate SQL
 ```
 
