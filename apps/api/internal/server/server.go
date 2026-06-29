@@ -17,6 +17,7 @@ import (
 	httpmw "github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
 	"github.com/novarod/polina/apps/api/internal/adapters/postgres"
 	appauth "github.com/novarod/polina/apps/api/internal/application/auth"
+	appmission "github.com/novarod/polina/apps/api/internal/application/mission"
 	apporg "github.com/novarod/polina/apps/api/internal/application/organization"
 	appws "github.com/novarod/polina/apps/api/internal/application/workspace"
 )
@@ -73,6 +74,14 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	updateWsUC := appws.NewUpdateUseCase(wsRepo, memberRepo)
 	deleteWsUC := appws.NewDeleteUseCase(wsRepo, memberRepo)
 
+	missionRepo := store.Missions()
+	createMissionUC := appmission.NewCreateUseCase(missionRepo, wsRepo, memberRepo)
+	listMissionUC := appmission.NewListUseCase(missionRepo, memberRepo)
+	getMissionUC := appmission.NewGetUseCase(missionRepo, memberRepo)
+	updateMissionUC := appmission.NewUpdateUseCase(missionRepo, memberRepo)
+	updateMissionGraphUC := appmission.NewUpdateGraphUseCase(missionRepo, memberRepo)
+	deleteMissionUC := appmission.NewDeleteUseCase(missionRepo, memberRepo)
+
 	// Handlers
 	authHandler := handler.NewAuthHandler(registerUC, loginUC, handler.CookieConfig{
 		Secure:      cfg.Production,
@@ -80,6 +89,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	})
 	orgHandler := handler.NewOrganizationHandler(createOrgUC, listOrgUC, getOrgUC, updateOrgUC, deleteOrgUC)
 	wsHandler := handler.NewWorkspaceHandler(createWsUC, listWsUC, getWsUC, updateWsUC, deleteWsUC)
+	missionHandler := handler.NewMissionHandler(createMissionUC, listMissionUC, getMissionUC, updateMissionUC, updateMissionGraphUC, deleteMissionUC)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -118,6 +128,14 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	orgs.GET("/:id/workspaces/:workspaceID", wsHandler.Get)
 	orgs.PATCH("/:id/workspaces/:workspaceID", wsHandler.Update)
 	orgs.DELETE("/:id/workspaces/:workspaceID", wsHandler.Delete)
+
+	// Mission routes (nested under the workspace)
+	orgs.POST("/:id/workspaces/:workspaceID/missions", missionHandler.Create)
+	orgs.GET("/:id/workspaces/:workspaceID/missions", missionHandler.List)
+	orgs.GET("/:id/workspaces/:workspaceID/missions/:missionID", missionHandler.Get)
+	orgs.PATCH("/:id/workspaces/:workspaceID/missions/:missionID", missionHandler.Update)
+	orgs.PUT("/:id/workspaces/:workspaceID/missions/:missionID/graph", missionHandler.UpdateGraph)
+	orgs.DELETE("/:id/workspaces/:workspaceID/missions/:missionID", missionHandler.Delete)
 
 	// Health
 	e.GET("/health", health)
