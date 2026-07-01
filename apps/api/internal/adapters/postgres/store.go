@@ -28,6 +28,9 @@ func (s *Store) Missions() ports.MissionRepository {
 func (s *Store) MissionVersions() ports.MissionVersionRepository {
 	return repository.NewMissionVersionRepository(s.pool)
 }
+func (s *Store) OrganizationAPIKeys() ports.OrganizationAPIKeyRepository {
+	return repository.NewOrganizationAPIKeyRepository(s.pool)
+}
 
 func (s *Store) WithinTx(ctx context.Context, fn func(ports.Repositories) error) (err error) {
 	tx, err := s.pool.Begin(ctx)

@@ -16,16 +16,21 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in          header
 // @name        Authorization
+// @securityDefinitions.apikey ApiKeyAuth
+// @in          header
+// @name        x-api-key
 func main() {
 	cfg := server.Config{
-		DBURL:          mustEnv("DATABASE_URL"),
-		JWTSecret:      mustEnv("JWT_SECRET"),
-		JWTExpiryHours: envInt("JWT_EXPIRY_HOURS", 24),
-		BcryptRounds:   envInt("BCRYPT_ROUNDS", 12),
-		Port:           envStr("PORT", "8080"),
-		FrontendURL:    envStr("FRONTEND_URL", "http://localhost:3000"),
-		ThrottleLimit:  envInt("THROTTLE_LIMIT", 30),
-		Production:     os.Getenv("ENV") == "production",
+		DBURL:                    mustEnv("DATABASE_URL"),
+		JWTSecret:                mustEnv("JWT_SECRET"),
+		JWTExpiryHours:           envInt("JWT_EXPIRY_HOURS", 24),
+		BcryptRounds:             envInt("BCRYPT_ROUNDS", 12),
+		Port:                     envStr("PORT", "8080"),
+		FrontendURL:              envStr("FRONTEND_URL", "http://localhost:3000"),
+		ThrottleLimit:            envInt("THROTTLE_LIMIT", 30),
+		EngineThrottleLimit:      envInt("ENGINE_THROTTLE_LIMIT", 600),
+		EngineLastUsedThrottleMs: envInt("ENGINE_LAST_USED_THROTTLE_MS", 60000),
+		Production:               os.Getenv("ENV") == "production",
 	}
 
 	if len(cfg.JWTSecret) < 32 {

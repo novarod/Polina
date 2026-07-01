@@ -38,10 +38,10 @@ func (s *limiterStore) get(key string, r rate.Limit, b int) *rate.Limiter {
 }
 
 func (s *limiterStore) cleanup() {
-	for range time.Tick(5 * time.Minute) {
+	for range time.Tick(2 * time.Minute) {
 		s.mu.Lock()
 		for k, e := range s.limiters {
-			if time.Since(e.lastSeen) > 10*time.Minute {
+			if time.Since(e.lastSeen) > 5*time.Minute {
 				delete(s.limiters, k)
 			}
 		}
@@ -50,12 +50,15 @@ func (s *limiterStore) cleanup() {
 }
 
 func RateLimit(requestsPerMin int) echo.MiddlewareFunc {
+	return RateLimitByKey(requestsPerMin, func(c echo.Context) string { return c.RealIP() })
+}
+
+func RateLimitByKey(requestsPerMin int, keyFn func(echo.Context) string) echo.MiddlewareFunc {
 	store := newLimiterStore()
 	r := rate.Every(time.Minute / time.Duration(requestsPerMin))
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			key := c.RealIP()
-			if !store.get(key, r, requestsPerMin).Allow() {
+			if !store.get(keyFn(c), r, requestsPerMin).Allow() {
 				return echo.NewHTTPError(http.StatusTooManyRequests, "rate limit exceeded")
 			}
 			return next(c)

@@ -10,7 +10,7 @@ import (
 
 func bindAndValidate(c echo.Context, v any) error {
 	if err := c.Bind(v); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid request body")
 	}
 	if err := c.Validate(v); err != nil {
 		return err

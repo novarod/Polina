@@ -105,6 +105,7 @@ type MissionRepository interface {
 	Create(ctx context.Context, m Mission) (Mission, error)
 	FindByID(ctx context.Context, id, orgID, workspaceID uuid.UUID) (Mission, error)
 	FindByIDForUpdate(ctx context.Context, id, orgID, workspaceID uuid.UUID) (Mission, error)
+	FindActiveHash(ctx context.Context, id, orgID uuid.UUID) (string, error)
 	List(ctx context.Context, workspaceID, orgID uuid.UUID) ([]Mission, error)
 	UpdateGraph(ctx context.Context, id, orgID, workspaceID uuid.UUID, graph json.RawMessage) (Mission, error)
 	Update(ctx context.Context, id, orgID, workspaceID uuid.UUID, name, description string) (Mission, error)
@@ -129,7 +130,29 @@ type MissionVersion struct {
 type MissionVersionRepository interface {
 	Create(ctx context.Context, v MissionVersion) (MissionVersion, error)
 	FindByHash(ctx context.Context, missionID, orgID uuid.UUID, hash string) (MissionVersion, error)
+	FindActive(ctx context.Context, missionID, orgID uuid.UUID) (MissionVersion, error)
 	List(ctx context.Context, missionID, orgID uuid.UUID) ([]MissionVersion, error)
+}
+
+// --- Organization API Key ---
+
+type OrganizationAPIKey struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	KeyHash        string
+	LastUsedAt     *time.Time
+	CreatedByID    uuid.UUID
+	CreatedAt      time.Time
+	RevokedAt      *time.Time
+}
+
+type OrganizationAPIKeyRepository interface {
+	Create(ctx context.Context, k OrganizationAPIKey) (OrganizationAPIKey, error)
+	FindActiveByHash(ctx context.Context, keyHash string) (OrganizationAPIKey, error)
+	ListByOrg(ctx context.Context, orgID uuid.UUID) ([]OrganizationAPIKey, error)
+	Revoke(ctx context.Context, id, orgID uuid.UUID) error
+	TouchLastUsed(ctx context.Context, id uuid.UUID, throttle time.Duration) error
 }
 
 // --- Transactions ---

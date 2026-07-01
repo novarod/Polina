@@ -25,10 +25,11 @@ depende de Echo, pgx ou HTTP. As regras de negócio são Go puro, e o framework 
 PostgreSQL e o código de JWT/bcrypt são infraestrutura plugada em interfaces (ports).
 
 Por enquanto o código implementa os domínios **auth**, **user**, **member**, **organization**,
-**workspace** e **mission** (core: grafo de quest + validação DAG, mais versionamento/publish: um
-grafo validado é compilado num contrato de runtime imutável e hasheado). O endpoint da engine UE5 que
-serve o contrato publicado ao plugin é o próximo ciclo. A infraestrutura (CI, Docker, migrations, lint,
-hooks de commit) já está pronta, então adicionar um novo domínio não significa refazer a fundação.
+**workspace**, **mission** (core: grafo de quest + validação DAG, mais versionamento/publish: um grafo
+validado é compilado num contrato de runtime imutável e hasheado) e **engine** (API keys por
+organização + os endpoints `x-api-key` que o plugin UE5 consulta para o hash ativo e o contrato) —
+fechando o loop over-the-air. A infraestrutura (CI, Docker, migrations, lint, hooks de commit) já está
+pronta, então adicionar um novo domínio não significa refazer a fundação.
 
 ## Arquitetura
 
@@ -45,15 +46,17 @@ apps/api/
 │   │   ├── shared/         # paginação
 │   │   └── workspace/      # validação de name/description
 │   ├── application/        # use cases (um struct por use case)
+│   │   ├── apikey/         # API keys da organização: create (raw uma vez), list, revoke
 │   │   ├── auth/           # register, login
 │   │   ├── authz/          # autorização escopada por org, reutilizável
+│   │   ├── engine/         # leitura do hash ativo + contrato para o plugin UE5
 │   │   ├── mission/        # create, list, get, update, update-graph, delete, publish, versions
 │   │   ├── organization/   # create, list, get, update, delete
 │   │   ├── token/          # claims do JWT (tipo compartilhado emissor/verificador)
 │   │   └── workspace/      # create, list, get, update, delete (escopado por tenant)
 │   ├── ports/              # interfaces de repositório & transação (os ports)
 │   └── adapters/           # o mundo externo
-│       ├── http/           # handlers Echo, middleware (auth, rate limit)
+│       ├── http/           # handlers Echo, middleware (auth JWT, auth x-api-key, rate limit)
 │       └── postgres/       # repositórios pgx, Store + gerenciador de transação
 ├── pkg/                    # apierr, dag (validador de grafo de quest), hash (SHA-256)
 └── db/migrations/          # SQL do golang-migrate
@@ -143,11 +146,8 @@ docker compose up --build
 | `PORT`                         | Porta HTTP (default `8080`)                                |
 | `FRONTEND_URL`                 | Origem permitida no CORS (default `http://localhost:3000`) |
 | `THROTTLE_LIMIT`               | Limite padrão de requisições por minuto (default `30`)     |
-| `ENGINE_THROTTLE_LIMIT`        | Rate limit das rotas de engine UE5 (reservada, ainda não lida) |
-| `ENGINE_LAST_USED_THROTTLE_MS` | Throttle do "last used" da engine (reservada, ainda não lida) |
-
-As duas variáveis `ENGINE_*` estão reservadas para o futuro módulo de engine (plugin UE5) e ainda não
-são lidas pelo código.
+| `ENGINE_THROTTLE_LIMIT`        | Rate limit por API key das rotas de engine UE5 (default `600`) |
+| `ENGINE_LAST_USED_THROTTLE_MS` | Intervalo mínimo entre escritas de `last_used_at` por key (default `60000`) |
 
 ## Rodar os testes
 
