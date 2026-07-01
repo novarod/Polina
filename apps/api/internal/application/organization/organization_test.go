@@ -91,9 +91,11 @@ type fakeRepos struct {
 	members ports.MemberRepository
 }
 
-func (f *fakeRepos) Users() ports.UserRepository                 { return nil }
-func (f *fakeRepos) Members() ports.MemberRepository             { return f.members }
-func (f *fakeRepos) Organizations() ports.OrganizationRepository { return f.orgs }
+func (f *fakeRepos) Users() ports.UserRepository                     { return nil }
+func (f *fakeRepos) Members() ports.MemberRepository                 { return f.members }
+func (f *fakeRepos) Organizations() ports.OrganizationRepository     { return f.orgs }
+func (f *fakeRepos) Missions() ports.MissionRepository               { return nil }
+func (f *fakeRepos) MissionVersions() ports.MissionVersionRepository { return nil }
 
 type fakeTxManager struct{ repos ports.Repositories }
 

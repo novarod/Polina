@@ -117,6 +117,20 @@ definitions:
       slug:
         type: string
     type: object
+  internal_adapters_http_handler.publishResponse:
+    properties:
+      active_hash:
+        type: string
+      hash:
+        type: string
+      mission_id:
+        format: uuid
+        type: string
+      status:
+        type: string
+      version:
+        type: integer
+    type: object
   internal_adapters_http_handler.updateMissionRequest:
     properties:
       description:
@@ -135,6 +149,38 @@ definitions:
         type: string
       name:
         type: string
+    type: object
+  internal_adapters_http_handler.versionDetail:
+    properties:
+      created_at:
+        type: string
+      hash:
+        type: string
+      id:
+        format: uuid
+        type: string
+      mission_data:
+        type: object
+      published_by_id:
+        format: uuid
+        type: string
+      version_number:
+        type: integer
+    type: object
+  internal_adapters_http_handler.versionSummary:
+    properties:
+      created_at:
+        type: string
+      hash:
+        type: string
+      id:
+        format: uuid
+        type: string
+      published_by_id:
+        format: uuid
+        type: string
+      version_number:
+        type: integer
     type: object
   internal_adapters_http_handler.workspaceResponse:
     properties:
@@ -838,6 +884,145 @@ paths:
       security:
       - BearerAuth: []
       summary: Update a mission graph
+      tags:
+      - missions
+  /organizations/{id}/workspaces/{workspaceID}/missions/{missionID}/publish:
+    post:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.publishResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: invalid graph
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Publish a mission version
+      tags:
+      - missions
+  /organizations/{id}/workspaces/{workspaceID}/missions/{missionID}/versions:
+    get:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_adapters_http_handler.versionSummary'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List mission versions
+      tags:
+      - missions
+  /organizations/{id}/workspaces/{workspaceID}/missions/{missionID}/versions/{hash}:
+    get:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Workspace ID (uuid)
+        in: path
+        name: workspaceID
+        required: true
+        type: string
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      - description: Version content hash
+        in: path
+        name: hash
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.versionDetail'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a mission version (by hash)
       tags:
       - missions
 securityDefinitions:

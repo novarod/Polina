@@ -25,6 +25,9 @@ func (s *Store) Workspaces() ports.WorkspaceRepository {
 func (s *Store) Missions() ports.MissionRepository {
 	return repository.NewMissionRepository(s.pool)
 }
+func (s *Store) MissionVersions() ports.MissionVersionRepository {
+	return repository.NewMissionVersionRepository(s.pool)
+}
 
 func (s *Store) WithinTx(ctx context.Context, fn func(ports.Repositories) error) (err error) {
 	tx, err := s.pool.Begin(ctx)
@@ -50,4 +53,10 @@ func (t *txRepos) Users() ports.UserRepository     { return repository.NewUserRe
 func (t *txRepos) Members() ports.MemberRepository { return repository.NewMemberRepository(t.tx) }
 func (t *txRepos) Organizations() ports.OrganizationRepository {
 	return repository.NewOrganizationRepository(t.tx)
+}
+func (t *txRepos) Missions() ports.MissionRepository {
+	return repository.NewMissionRepository(t.tx)
+}
+func (t *txRepos) MissionVersions() ports.MissionVersionRepository {
+	return repository.NewMissionVersionRepository(t.tx)
 }

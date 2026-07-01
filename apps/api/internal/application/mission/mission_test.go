@@ -33,6 +33,8 @@ type fakeMissionRepo struct {
 	updatedGraph json.RawMessage
 	updateGCalls int
 	softDeleted  []uuid.UUID
+	activeHash   string
+	activeCalls  int
 }
 
 func (f *fakeMissionRepo) Create(_ context.Context, m ports.Mission) (ports.Mission, error) {
@@ -41,6 +43,9 @@ func (f *fakeMissionRepo) Create(_ context.Context, m ports.Mission) (ports.Miss
 	return m, nil
 }
 func (f *fakeMissionRepo) FindByID(_ context.Context, _, _, _ uuid.UUID) (ports.Mission, error) {
+	return f.findByID, f.findByIDErr
+}
+func (f *fakeMissionRepo) FindByIDForUpdate(_ context.Context, _, _, _ uuid.UUID) (ports.Mission, error) {
 	return f.findByID, f.findByIDErr
 }
 func (f *fakeMissionRepo) List(_ context.Context, _, _ uuid.UUID) ([]ports.Mission, error) {
@@ -53,6 +58,14 @@ func (f *fakeMissionRepo) UpdateGraph(_ context.Context, _, _, _ uuid.UUID, grap
 }
 func (f *fakeMissionRepo) Update(_ context.Context, _, _, _ uuid.UUID, name, description string) (ports.Mission, error) {
 	return ports.Mission{Name: name, Description: description}, nil
+}
+func (f *fakeMissionRepo) SetActiveVersion(_ context.Context, _, _, _ uuid.UUID, hash, status string) (ports.Mission, error) {
+	f.activeCalls++
+	f.activeHash = hash
+	m := f.findByID
+	m.ActiveHash = &hash
+	m.Status = status
+	return m, nil
 }
 func (f *fakeMissionRepo) SoftDelete(_ context.Context, id, _, _ uuid.UUID) error {
 	f.softDeleted = append(f.softDeleted, id)

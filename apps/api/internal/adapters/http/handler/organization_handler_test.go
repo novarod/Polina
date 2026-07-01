@@ -59,13 +59,17 @@ func (f *fakeMemberRepo) FindByUserAndOrg(_ context.Context, _, _ uuid.UUID) (po
 func (f *fakeMemberRepo) SoftDeleteByOrg(_ context.Context, _ uuid.UUID) error { return nil }
 
 type fakeRepos struct {
-	orgs    ports.OrganizationRepository
-	members ports.MemberRepository
+	orgs     ports.OrganizationRepository
+	members  ports.MemberRepository
+	missions ports.MissionRepository
+	versions ports.MissionVersionRepository
 }
 
-func (f *fakeRepos) Users() ports.UserRepository                 { return nil }
-func (f *fakeRepos) Members() ports.MemberRepository             { return f.members }
-func (f *fakeRepos) Organizations() ports.OrganizationRepository { return f.orgs }
+func (f *fakeRepos) Users() ports.UserRepository                     { return nil }
+func (f *fakeRepos) Members() ports.MemberRepository                 { return f.members }
+func (f *fakeRepos) Organizations() ports.OrganizationRepository     { return f.orgs }
+func (f *fakeRepos) Missions() ports.MissionRepository               { return f.missions }
+func (f *fakeRepos) MissionVersions() ports.MissionVersionRepository { return f.versions }
 
 type fakeTxManager struct{ repos ports.Repositories }
 

@@ -104,10 +104,32 @@ type Mission struct {
 type MissionRepository interface {
 	Create(ctx context.Context, m Mission) (Mission, error)
 	FindByID(ctx context.Context, id, orgID, workspaceID uuid.UUID) (Mission, error)
+	FindByIDForUpdate(ctx context.Context, id, orgID, workspaceID uuid.UUID) (Mission, error)
 	List(ctx context.Context, workspaceID, orgID uuid.UUID) ([]Mission, error)
 	UpdateGraph(ctx context.Context, id, orgID, workspaceID uuid.UUID, graph json.RawMessage) (Mission, error)
 	Update(ctx context.Context, id, orgID, workspaceID uuid.UUID, name, description string) (Mission, error)
+	SetActiveVersion(ctx context.Context, id, orgID, workspaceID uuid.UUID, hash, status string) (Mission, error)
 	SoftDelete(ctx context.Context, id, orgID, workspaceID uuid.UUID) error
+}
+
+// --- Mission Version ---
+
+type MissionVersion struct {
+	ID             uuid.UUID
+	MissionID      uuid.UUID
+	OrganizationID uuid.UUID
+	VersionNumber  int
+	Hash           string
+	Graph          json.RawMessage
+	MissionData    json.RawMessage
+	PublishedByID  uuid.UUID
+	CreatedAt      time.Time
+}
+
+type MissionVersionRepository interface {
+	Create(ctx context.Context, v MissionVersion) (MissionVersion, error)
+	FindByHash(ctx context.Context, missionID, orgID uuid.UUID, hash string) (MissionVersion, error)
+	List(ctx context.Context, missionID, orgID uuid.UUID) ([]MissionVersion, error)
 }
 
 // --- Transactions ---
@@ -116,6 +138,8 @@ type Repositories interface {
 	Users() UserRepository
 	Members() MemberRepository
 	Organizations() OrganizationRepository
+	Missions() MissionRepository
+	MissionVersions() MissionVersionRepository
 }
 
 type TxManager interface {

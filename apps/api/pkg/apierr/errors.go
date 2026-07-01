@@ -1,6 +1,9 @@
 package apierr
 
-import "net/http"
+import (
+	"errors"
+	"net/http"
+)
 
 type AppError struct {
 	Code    int    `json:"-"`
@@ -22,4 +25,9 @@ func NotFound(resource string) *AppError {
 
 func Forbidden(reason string) *AppError {
 	return &AppError{Code: http.StatusForbidden, Message: reason}
+}
+
+func IsNotFound(err error) bool {
+	var e *AppError
+	return errors.As(err, &e) && e.Code == http.StatusNotFound
 }
