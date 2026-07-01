@@ -25,9 +25,10 @@ layer doesn't depend on Echo, pgx or HTTP. The business rules are plain Go, and 
 the PostgreSQL adapter and the JWT/bcrypt code are all infrastructure plugged into interfaces (ports).
 
 For now the code implements the **auth**, **user**, **member**, **organization**, **workspace** and
-**mission** (core: quest graph + DAG validation) domains. Mission versioning/publish and the UE5
-engine endpoint are the next cycle. The infrastructure (CI, Docker, migrations, linting, commit hooks)
-is already set up, so adding a new domain doesn't mean redoing the foundation.
+**mission** (core: quest graph + DAG validation, plus versioning/publish: a validated graph is
+compiled into a hashed, immutable runtime contract) domains. The UE5 engine endpoint that serves the
+published contract to the plugin is the next cycle. The infrastructure (CI, Docker, migrations,
+linting, commit hooks) is already set up, so adding a new domain doesn't mean redoing the foundation.
 
 ## Architecture
 
@@ -39,14 +40,14 @@ apps/api/
 ├── internal/
 │   ├── domain/             # entities & rules, no framework imports
 │   │   ├── member/         # Role value object (VIEWER < DESIGNER < ADMIN)
-│   │   ├── mission/        # name/desc validation + structural graph (DAG) validation
+│   │   ├── mission/        # name/desc validation, DAG graph validation, contract compile
 │   │   ├── organization/   # name/slug validation
 │   │   ├── shared/         # pagination
 │   │   └── workspace/      # name/description validation
 │   ├── application/        # use cases (one struct per use case)
 │   │   ├── auth/           # register, login
 │   │   ├── authz/          # reusable org-scoped authorization
-│   │   ├── mission/        # create, list, get, update, update-graph, delete
+│   │   ├── mission/        # create, list, get, update, update-graph, delete, publish, versions
 │   │   ├── organization/   # create, list, get, update, delete
 │   │   ├── token/          # JWT session claims (shared issuer/verifier type)
 │   │   └── workspace/      # create, list, get, update, delete (tenant-scoped)

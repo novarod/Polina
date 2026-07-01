@@ -22,6 +22,8 @@ import (
 	appws "github.com/novarod/polina/apps/api/internal/application/workspace"
 )
 
+const maxRequestBody = "1M"
+
 type Config struct {
 	DBURL          string
 	JWTSecret      string
@@ -82,6 +84,11 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	updateMissionGraphUC := appmission.NewUpdateGraphUseCase(missionRepo, memberRepo)
 	deleteMissionUC := appmission.NewDeleteUseCase(missionRepo, memberRepo)
 
+	missionVersionRepo := store.MissionVersions()
+	publishMissionUC := appmission.NewPublishUseCase(store)
+	listVersionsUC := appmission.NewListVersionsUseCase(missionRepo, missionVersionRepo, memberRepo)
+	getVersionUC := appmission.NewGetVersionUseCase(missionRepo, missionVersionRepo, memberRepo)
+
 	// Handlers
 	authHandler := handler.NewAuthHandler(registerUC, loginUC, handler.CookieConfig{
 		Secure:      cfg.Production,
@@ -90,6 +97,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	orgHandler := handler.NewOrganizationHandler(createOrgUC, listOrgUC, getOrgUC, updateOrgUC, deleteOrgUC)
 	wsHandler := handler.NewWorkspaceHandler(createWsUC, listWsUC, getWsUC, updateWsUC, deleteWsUC)
 	missionHandler := handler.NewMissionHandler(createMissionUC, listMissionUC, getMissionUC, updateMissionUC, updateMissionGraphUC, deleteMissionUC)
+	missionVersionHandler := handler.NewMissionVersionHandler(publishMissionUC, listVersionsUC, getVersionUC)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -100,6 +108,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	// Global middleware
 	e.Use(echomiddleware.Logger())
 	e.Use(echomiddleware.Recover())
+	e.Use(echomiddleware.BodyLimit(maxRequestBody))
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     []string{cfg.FrontendURL},
 		AllowMethods:     []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch},
@@ -136,6 +145,11 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	orgs.PATCH("/:id/workspaces/:workspaceID/missions/:missionID", missionHandler.Update)
 	orgs.PUT("/:id/workspaces/:workspaceID/missions/:missionID/graph", missionHandler.UpdateGraph)
 	orgs.DELETE("/:id/workspaces/:workspaceID/missions/:missionID", missionHandler.Delete)
+
+	// Mission version routes (publish + immutable snapshots)
+	orgs.POST("/:id/workspaces/:workspaceID/missions/:missionID/publish", missionVersionHandler.Publish)
+	orgs.GET("/:id/workspaces/:workspaceID/missions/:missionID/versions", missionVersionHandler.ListVersions)
+	orgs.GET("/:id/workspaces/:workspaceID/missions/:missionID/versions/:hash", missionVersionHandler.GetVersion)
 
 	// Health
 	e.GET("/health", health)

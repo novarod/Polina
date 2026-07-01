@@ -25,9 +25,10 @@ depende de Echo, pgx ou HTTP. As regras de negócio são Go puro, e o framework 
 PostgreSQL e o código de JWT/bcrypt são infraestrutura plugada em interfaces (ports).
 
 Por enquanto o código implementa os domínios **auth**, **user**, **member**, **organization**,
-**workspace** e **mission** (core: grafo de quest + validação DAG). O versionamento/publish da mission
-e o endpoint da engine UE5 são o próximo ciclo. A infraestrutura (CI, Docker, migrations, lint, hooks
-de commit) já está pronta, então adicionar um novo domínio não significa refazer a fundação.
+**workspace** e **mission** (core: grafo de quest + validação DAG, mais versionamento/publish: um
+grafo validado é compilado num contrato de runtime imutável e hasheado). O endpoint da engine UE5 que
+serve o contrato publicado ao plugin é o próximo ciclo. A infraestrutura (CI, Docker, migrations, lint,
+hooks de commit) já está pronta, então adicionar um novo domínio não significa refazer a fundação.
 
 ## Arquitetura
 
@@ -39,14 +40,14 @@ apps/api/
 ├── internal/
 │   ├── domain/             # entidades & regras, sem imports de framework
 │   │   ├── member/         # value object Role (VIEWER < DESIGNER < ADMIN)
-│   │   ├── mission/        # validação de name/desc + validação estrutural do grafo (DAG)
+│   │   ├── mission/        # validação de name/desc, validação do grafo (DAG), compile do contrato
 │   │   ├── organization/   # validação de name/slug
 │   │   ├── shared/         # paginação
 │   │   └── workspace/      # validação de name/description
 │   ├── application/        # use cases (um struct por use case)
 │   │   ├── auth/           # register, login
 │   │   ├── authz/          # autorização escopada por org, reutilizável
-│   │   ├── mission/        # create, list, get, update, update-graph, delete
+│   │   ├── mission/        # create, list, get, update, update-graph, delete, publish, versions
 │   │   ├── organization/   # create, list, get, update, delete
 │   │   ├── token/          # claims do JWT (tipo compartilhado emissor/verificador)
 │   │   └── workspace/      # create, list, get, update, delete (escopado por tenant)

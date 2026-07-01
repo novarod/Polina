@@ -50,6 +50,24 @@ func (r *MissionRepository) FindByID(ctx context.Context, id, orgID, workspaceID
 	return m, nil
 }
 
+func (r *MissionRepository) FindByIDForUpdate(ctx context.Context, id, orgID, workspaceID uuid.UUID) (ports.Mission, error) {
+	row := r.db.QueryRow(ctx, `
+		SELECT id, organization_id, workspace_id, name, description, status, active_hash, graph, created_by_id, created_at, deleted_at
+		FROM missions
+		WHERE id = $1 AND organization_id = $2 AND workspace_id = $3 AND deleted_at IS NULL
+		FOR UPDATE`,
+		id, orgID, workspaceID,
+	)
+	m, err := scanMission(row)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return ports.Mission{}, apierr.NotFound("mission")
+		}
+		return ports.Mission{}, fmt.Errorf("mission.FindByIDForUpdate: %w", err)
+	}
+	return m, nil
+}
+
 func (r *MissionRepository) List(ctx context.Context, workspaceID, orgID uuid.UUID) ([]ports.Mission, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, organization_id, workspace_id, name, description, status, active_hash, graph, created_by_id, created_at, deleted_at
@@ -107,6 +125,23 @@ func (r *MissionRepository) Update(ctx context.Context, id, orgID, workspaceID u
 			return ports.Mission{}, apierr.NotFound("mission")
 		}
 		return ports.Mission{}, fmt.Errorf("mission.Update: %w", err)
+	}
+	return m, nil
+}
+
+func (r *MissionRepository) SetActiveVersion(ctx context.Context, id, orgID, workspaceID uuid.UUID, hash, status string) (ports.Mission, error) {
+	row := r.db.QueryRow(ctx, `
+		UPDATE missions SET active_hash = $1, status = $2, updated_at = NOW()
+		WHERE id = $3 AND organization_id = $4 AND workspace_id = $5 AND deleted_at IS NULL
+		RETURNING id, organization_id, workspace_id, name, description, status, active_hash, graph, created_by_id, created_at, deleted_at`,
+		hash, status, id, orgID, workspaceID,
+	)
+	m, err := scanMission(row)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return ports.Mission{}, apierr.NotFound("mission")
+		}
+		return ports.Mission{}, fmt.Errorf("mission.SetActiveVersion: %w", err)
 	}
 	return m, nil
 }
