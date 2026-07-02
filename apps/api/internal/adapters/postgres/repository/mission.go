@@ -68,6 +68,25 @@ func (r *MissionRepository) FindByIDForUpdate(ctx context.Context, id, orgID, wo
 	return m, nil
 }
 
+func (r *MissionRepository) FindActiveHash(ctx context.Context, id, orgID uuid.UUID) (string, error) {
+	var activeHash *string
+	err := r.db.QueryRow(ctx, `
+		SELECT active_hash FROM missions
+		WHERE id = $1 AND organization_id = $2 AND deleted_at IS NULL`,
+		id, orgID,
+	).Scan(&activeHash)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return "", apierr.NotFound("mission")
+		}
+		return "", fmt.Errorf("mission.FindActiveHash: %w", err)
+	}
+	if activeHash == nil {
+		return "", apierr.NotFound("active mission version")
+	}
+	return *activeHash, nil
+}
+
 func (r *MissionRepository) List(ctx context.Context, workspaceID, orgID uuid.UUID) ([]ports.Mission, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT id, organization_id, workspace_id, name, description, status, active_hash, graph, created_by_id, created_at, deleted_at

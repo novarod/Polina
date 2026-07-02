@@ -70,6 +70,10 @@ func (f *fakeRepos) Members() ports.MemberRepository                 { return f.
 func (f *fakeRepos) Organizations() ports.OrganizationRepository     { return f.orgs }
 func (f *fakeRepos) Missions() ports.MissionRepository               { return f.missions }
 func (f *fakeRepos) MissionVersions() ports.MissionVersionRepository { return f.versions }
+func (f *fakeRepos) Workspaces() ports.WorkspaceRepository           { return nil }
+func (f *fakeRepos) OrganizationAPIKeys() ports.OrganizationAPIKeyRepository {
+	return nil
+}
 
 type fakeTxManager struct{ repos ports.Repositories }
 

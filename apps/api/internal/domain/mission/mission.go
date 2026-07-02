@@ -19,6 +19,9 @@ const (
 	nameMin = 2
 	nameMax = 255
 	descMax = 1000
+
+	maxGraphNodes = 10000
+	maxGraphEdges = 20000
 )
 
 func ValidateName(name string) error {
@@ -40,6 +43,12 @@ func ValidateGraph(raw []byte) error {
 	var g dag.Graph
 	if err := json.Unmarshal(raw, &g); err != nil {
 		return apierr.Validation("graph", "graph must be valid JSON with nodes and edges")
+	}
+	if len(g.Nodes) > maxGraphNodes {
+		return apierr.Validation("graph", "graph has too many nodes")
+	}
+	if len(g.Edges) > maxGraphEdges {
+		return apierr.Validation("graph", "graph has too many edges")
 	}
 	if err := dag.Validate(g); err != nil {
 		return apierr.Validation("graph", err.Error())

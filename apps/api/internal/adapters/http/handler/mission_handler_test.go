@@ -36,6 +36,15 @@ func (f *fakeMissionRepo) FindByID(_ context.Context, _, _, _ uuid.UUID) (ports.
 func (f *fakeMissionRepo) FindByIDForUpdate(_ context.Context, _, _, _ uuid.UUID) (ports.Mission, error) {
 	return f.findByID, f.findByIDErr
 }
+func (f *fakeMissionRepo) FindActiveHash(_ context.Context, _, _ uuid.UUID) (string, error) {
+	if f.findByIDErr != nil {
+		return "", f.findByIDErr
+	}
+	if f.findByID.ActiveHash != nil {
+		return *f.findByID.ActiveHash, nil
+	}
+	return "", apierr.NotFound("active mission version")
+}
 func (f *fakeMissionRepo) List(_ context.Context, _, _ uuid.UUID) ([]ports.Mission, error) {
 	return nil, nil
 }

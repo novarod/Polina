@@ -16,7 +16,9 @@ import (
 	"github.com/novarod/polina/apps/api/internal/adapters/http/handler"
 	httpmw "github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
 	"github.com/novarod/polina/apps/api/internal/adapters/postgres"
+	appapikey "github.com/novarod/polina/apps/api/internal/application/apikey"
 	appauth "github.com/novarod/polina/apps/api/internal/application/auth"
+	appengine "github.com/novarod/polina/apps/api/internal/application/engine"
 	appmission "github.com/novarod/polina/apps/api/internal/application/mission"
 	apporg "github.com/novarod/polina/apps/api/internal/application/organization"
 	appws "github.com/novarod/polina/apps/api/internal/application/workspace"
@@ -24,15 +26,23 @@ import (
 
 const maxRequestBody = "1M"
 
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	idleTimeout       = 60 * time.Second
+)
+
 type Config struct {
-	DBURL          string
-	JWTSecret      string
-	JWTExpiryHours int
-	BcryptRounds   int
-	Port           string
-	FrontendURL    string
-	ThrottleLimit  int
-	Production     bool
+	DBURL                    string
+	JWTSecret                string
+	JWTExpiryHours           int
+	BcryptRounds             int
+	Port                     string
+	FrontendURL              string
+	ThrottleLimit            int
+	EngineThrottleLimit      int
+	EngineLastUsedThrottleMs int
+	Production               bool
 }
 
 type Server struct {
@@ -61,7 +71,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 
 	// Use cases
 	registerUC := appauth.NewRegisterUseCase(store.Users(), cfg.BcryptRounds)
-	loginUC := appauth.NewLoginUseCase(store.Users(), memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+	loginUC := appauth.NewLoginUseCase(store.Users(), memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptRounds)
 
 	createOrgUC := apporg.NewCreateUseCase(store)
 	listOrgUC := apporg.NewListUseCase(orgRepo)
@@ -89,6 +99,13 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	listVersionsUC := appmission.NewListVersionsUseCase(missionRepo, missionVersionRepo, memberRepo)
 	getVersionUC := appmission.NewGetVersionUseCase(missionRepo, missionVersionRepo, memberRepo)
 
+	apiKeyRepo := store.OrganizationAPIKeys()
+	createAPIKeyUC := appapikey.NewCreateUseCase(apiKeyRepo, memberRepo)
+	listAPIKeyUC := appapikey.NewListUseCase(apiKeyRepo, memberRepo)
+	revokeAPIKeyUC := appapikey.NewRevokeUseCase(apiKeyRepo, memberRepo)
+	engineHashUC := appengine.NewGetActiveHashUseCase(missionRepo)
+	engineContractUC := appengine.NewGetActiveContractUseCase(missionVersionRepo)
+
 	// Handlers
 	authHandler := handler.NewAuthHandler(registerUC, loginUC, handler.CookieConfig{
 		Secure:      cfg.Production,
@@ -98,9 +115,12 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	wsHandler := handler.NewWorkspaceHandler(createWsUC, listWsUC, getWsUC, updateWsUC, deleteWsUC)
 	missionHandler := handler.NewMissionHandler(createMissionUC, listMissionUC, getMissionUC, updateMissionUC, updateMissionGraphUC, deleteMissionUC)
 	missionVersionHandler := handler.NewMissionVersionHandler(publishMissionUC, listVersionsUC, getVersionUC)
+	apiKeyHandler := handler.NewAPIKeyHandler(createAPIKeyUC, listAPIKeyUC, revokeAPIKeyUC)
+	engineHandler := handler.NewEngineHandler(engineHashUC, engineContractUC)
 
 	e := echo.New()
 	e.HideBanner = true
+	configureTimeouts(e.Server)
 	e.IPExtractor = echo.ExtractIPDirect()
 	e.Validator = &echoValidator{v: validator.New()}
 	e.HTTPErrorHandler = errorHandler
@@ -151,6 +171,20 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	orgs.GET("/:id/workspaces/:workspaceID/missions/:missionID/versions", missionVersionHandler.ListVersions)
 	orgs.GET("/:id/workspaces/:workspaceID/missions/:missionID/versions/:hash", missionVersionHandler.GetVersion)
 
+	// Organization API key routes (ADMIN; enforced in the use case)
+	orgs.POST("/:id/api-keys", apiKeyHandler.Create)
+	orgs.GET("/:id/api-keys", apiKeyHandler.List)
+	orgs.DELETE("/:id/api-keys/:keyID", apiKeyHandler.Revoke)
+
+	// Engine routes (UE5 plugin, x-api-key auth — outside the JWT group)
+	engineThrottle := time.Duration(cfg.EngineLastUsedThrottleMs) * time.Millisecond
+	engine := e.Group("/engine")
+	engine.Use(httpmw.APIKeyAuth(apiKeyRepo))
+	engine.Use(httpmw.RateLimitByEngineKey(cfg.EngineThrottleLimit))
+	engine.Use(httpmw.TouchAPIKey(apiKeyRepo, engineThrottle))
+	engine.GET("/missions/:missionID/active/hash", engineHandler.ActiveHash)
+	engine.GET("/missions/:missionID/active", engineHandler.ActiveContract)
+
 	// Health
 	e.GET("/health", health)
 
@@ -171,11 +205,21 @@ func health(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func configureTimeouts(srv *http.Server) {
+	srv.ReadHeaderTimeout = readHeaderTimeout
+	srv.ReadTimeout = readTimeout
+	srv.IdleTimeout = idleTimeout
+}
+
 func (s *Server) Start() error {
 	if err := s.echo.Start(":" + s.port); err != nil && err != http.ErrServerClosed {
 		return err
 	}
 	return nil
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.echo.Shutdown(ctx)
 }
 
 func (s *Server) Close() {
@@ -194,7 +238,8 @@ func (ev *echoValidator) Validate(i any) error {
 func errorHandler(err error, c echo.Context) {
 	he, ok := err.(*echo.HTTPError)
 	if !ok {
-		he = echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		c.Logger().Error(err)
+		he = echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 	}
 	if !c.Response().Committed {
 		_ = c.JSON(he.Code, map[string]any{

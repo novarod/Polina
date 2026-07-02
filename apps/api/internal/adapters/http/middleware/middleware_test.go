@@ -87,6 +87,19 @@ func TestAuth_Expired_401(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
+func TestRateLimit_ZeroLimitDoesNotPanic(t *testing.T) {
+	e := echo.New()
+	e.GET("/limited", func(c echo.Context) error {
+		return c.NoContent(http.StatusOK)
+	}, httpmw.RateLimit(0)) // clamped to 1 req/min instead of panicking
+
+	req := httptest.NewRequest(http.MethodGet, "/limited", nil)
+	req.RemoteAddr = "203.0.113.8:5555"
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
 func TestRateLimit_AllowsUpToLimitThenBlocks(t *testing.T) {
 	e := echo.New()
 	e.GET("/limited", func(c echo.Context) error {

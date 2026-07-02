@@ -49,6 +49,37 @@ definitions:
       slug:
         type: string
     type: object
+  internal_adapters_http_handler.apiKeyResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        format: uuid
+        type: string
+      last_used_at:
+        type: string
+      name:
+        type: string
+      revoked_at:
+        type: string
+    type: object
+  internal_adapters_http_handler.createAPIKeyRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  internal_adapters_http_handler.createAPIKeyResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        format: uuid
+        type: string
+      key:
+        type: string
+      name:
+        type: string
+    type: object
   internal_adapters_http_handler.createMissionRequest:
     properties:
       description:
@@ -68,6 +99,11 @@ definitions:
       description:
         type: string
       name:
+        type: string
+    type: object
+  internal_adapters_http_handler.engineHashResponse:
+    properties:
+      hash:
         type: string
     type: object
   internal_adapters_http_handler.loginResponse:
@@ -271,6 +307,71 @@ paths:
       summary: Register a new user
       tags:
       - auth
+  /engine/missions/{missionID}/active:
+    get:
+      parameters:
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: compiled mission contract
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Fetch the active compiled contract of a mission (engine)
+      tags:
+      - engine
+  /engine/missions/{missionID}/active/hash:
+    get:
+      parameters:
+      - description: Mission ID (uuid)
+        in: path
+        name: missionID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.engineHashResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - ApiKeyAuth: []
+      summary: Poll the active version hash of a mission (engine)
+      tags:
+      - engine
   /health:
     get:
       produces:
@@ -439,6 +540,106 @@ paths:
       summary: Update an organization
       tags:
       - organizations
+  /organizations/{id}/api-keys:
+    get:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_adapters_http_handler.apiKeyResponse'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List organization API keys
+      tags:
+      - api-keys
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: API key payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_adapters_http_handler.createAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: the raw key is returned only here
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.createAPIKeyResponse'
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create an organization API key
+      tags:
+      - api-keys
+  /organizations/{id}/api-keys/{keyID}:
+    delete:
+      parameters:
+      - description: Organization ID (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: API key ID (uuid)
+        in: path
+        name: keyID
+        required: true
+        type: string
+      responses:
+        "204":
+          description: no content
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke an organization API key
+      tags:
+      - api-keys
   /organizations/{id}/workspaces:
     get:
       parameters:
@@ -1026,6 +1227,10 @@ paths:
       tags:
       - missions
 securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: x-api-key
+    type: apiKey
   BearerAuth:
     in: header
     name: Authorization

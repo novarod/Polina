@@ -2,12 +2,18 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/novarod/polina/apps/api/internal/server"
 )
+
+const shutdownTimeout = 10 * time.Second
 
 // @title       Polina API
 // @version     0.1.0
@@ -16,33 +22,69 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in          header
 // @name        Authorization
+// @securityDefinitions.apikey ApiKeyAuth
+// @in          header
+// @name        x-api-key
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	cfg := server.Config{
-		DBURL:          mustEnv("DATABASE_URL"),
-		JWTSecret:      mustEnv("JWT_SECRET"),
-		JWTExpiryHours: envInt("JWT_EXPIRY_HOURS", 24),
-		BcryptRounds:   envInt("BCRYPT_ROUNDS", 12),
-		Port:           envStr("PORT", "8080"),
-		FrontendURL:    envStr("FRONTEND_URL", "http://localhost:3000"),
-		ThrottleLimit:  envInt("THROTTLE_LIMIT", 30),
-		Production:     os.Getenv("ENV") == "production",
+		DBURL:                    mustEnv("DATABASE_URL"),
+		JWTSecret:                mustEnv("JWT_SECRET"),
+		JWTExpiryHours:           envInt("JWT_EXPIRY_HOURS", 24),
+		BcryptRounds:             envInt("BCRYPT_ROUNDS", 12),
+		Port:                     envStr("PORT", "8080"),
+		FrontendURL:              envStr("FRONTEND_URL", "http://localhost:3000"),
+		ThrottleLimit:            envInt("THROTTLE_LIMIT", 30),
+		EngineThrottleLimit:      envInt("ENGINE_THROTTLE_LIMIT", 600),
+		EngineLastUsedThrottleMs: envInt("ENGINE_LAST_USED_THROTTLE_MS", 60000),
+		Production:               os.Getenv("ENV") == "production",
 	}
 
 	if len(cfg.JWTSecret) < 32 {
-		log.Fatalf("JWT_SECRET must be at least 32 bytes (got %d)", len(cfg.JWTSecret))
+		return fmt.Errorf("JWT_SECRET must be at least 32 bytes (got %d)", len(cfg.JWTSecret))
+	}
+	if cfg.ThrottleLimit <= 0 {
+		return fmt.Errorf("THROTTLE_LIMIT must be greater than 0 (got %d)", cfg.ThrottleLimit)
+	}
+	if cfg.EngineThrottleLimit <= 0 {
+		return fmt.Errorf("ENGINE_THROTTLE_LIMIT must be greater than 0 (got %d)", cfg.EngineThrottleLimit)
 	}
 
-	srv, err := server.New(context.Background(), cfg)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+
+	srv, err := server.New(ctx, cfg)
 	if err != nil {
-		log.Fatalf("init server: %v", err)
+		return fmt.Errorf("init server: %w", err)
 	}
 
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Start() }()
 	log.Printf("Polina API listening on :%s", cfg.Port)
-	err = srv.Start()
-	srv.Close()
-	if err != nil {
-		log.Fatalf("server: %v", err)
+
+	select {
+	case err := <-errCh:
+		srv.Close()
+		if err != nil {
+			return fmt.Errorf("server: %w", err)
+		}
+	case <-ctx.Done():
+		log.Println("shutdown signal received, draining requests")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			log.Printf("shutdown: %v", err)
+		}
+		<-errCh
+		srv.Close()
+		log.Println("shutdown complete")
 	}
+	return nil
 }
 
 func mustEnv(key string) string {

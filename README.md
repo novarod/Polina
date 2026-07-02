@@ -24,11 +24,12 @@ recompiling the game binary. It is built with Hexagonal Architecture (ports and 
 layer doesn't depend on Echo, pgx or HTTP. The business rules are plain Go, and the web framework,
 the PostgreSQL adapter and the JWT/bcrypt code are all infrastructure plugged into interfaces (ports).
 
-For now the code implements the **auth**, **user**, **member**, **organization**, **workspace** and
+For now the code implements the **auth**, **user**, **member**, **organization**, **workspace**,
 **mission** (core: quest graph + DAG validation, plus versioning/publish: a validated graph is
-compiled into a hashed, immutable runtime contract) domains. The UE5 engine endpoint that serves the
-published contract to the plugin is the next cycle. The infrastructure (CI, Docker, migrations,
-linting, commit hooks) is already set up, so adding a new domain doesn't mean redoing the foundation.
+compiled into a hashed, immutable runtime contract) and **engine** (organization API keys + the
+`x-api-key` endpoints the UE5 plugin polls for the active hash and contract) domains — closing the
+over-the-air loop. The infrastructure (CI, Docker, migrations, linting, commit hooks) is already set
+up, so adding a new domain doesn't mean redoing the foundation.
 
 ## Architecture
 
@@ -45,15 +46,17 @@ apps/api/
 │   │   ├── shared/         # pagination
 │   │   └── workspace/      # name/description validation
 │   ├── application/        # use cases (one struct per use case)
+│   │   ├── apikey/         # organization API keys: create (raw once), list, revoke
 │   │   ├── auth/           # register, login
 │   │   ├── authz/          # reusable org-scoped authorization
+│   │   ├── engine/         # active hash + contract reads for the UE5 plugin
 │   │   ├── mission/        # create, list, get, update, update-graph, delete, publish, versions
 │   │   ├── organization/   # create, list, get, update, delete
 │   │   ├── token/          # JWT session claims (shared issuer/verifier type)
 │   │   └── workspace/      # create, list, get, update, delete (tenant-scoped)
 │   ├── ports/              # repository & transaction interfaces (the ports)
 │   └── adapters/           # the outside world
-│       ├── http/           # Echo handlers, middleware (auth, rate limit)
+│       ├── http/           # Echo handlers, middleware (JWT auth, x-api-key auth, rate limit)
 │       └── postgres/       # pgx repositories, Store + transaction manager
 ├── pkg/                    # apierr, dag (quest graph validator), hash (SHA-256)
 └── db/migrations/          # golang-migrate SQL
@@ -141,11 +144,8 @@ docker compose up --build
 | `PORT`                         | HTTP port (default `8080`)                                 |
 | `FRONTEND_URL`                 | Allowed CORS origin (default `http://localhost:3000`)      |
 | `THROTTLE_LIMIT`               | Default requests-per-minute limit (default `30`)           |
-| `ENGINE_THROTTLE_LIMIT`        | Rate limit for the UE5 engine routes (reserved, not read yet) |
-| `ENGINE_LAST_USED_THROTTLE_MS` | Throttle for engine "last used" updates (reserved, not read yet) |
-
-The two `ENGINE_*` variables are reserved for the upcoming engine (UE5 plugin) module and are not
-read by the code yet.
+| `ENGINE_THROTTLE_LIMIT`        | Per-API-key rate limit for the UE5 engine routes (default `600`) |
+| `ENGINE_LAST_USED_THROTTLE_MS` | Minimum interval between `last_used_at` writes per key (default `60000`) |
 
 ## Run tests
 

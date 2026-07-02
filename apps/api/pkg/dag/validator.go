@@ -2,6 +2,11 @@ package dag
 
 import "fmt"
 
+const (
+	MaxNodes = 1000
+	MaxEdges = 2000
+)
+
 type Node struct {
 	ID   string `json:"id"`
 	Type string `json:"type"`
@@ -29,16 +34,24 @@ func (e *ValidationError) Error() string {
 func Validate(g Graph) error {
 	var errs []string
 
+	if len(g.Nodes) > MaxNodes {
+		errs = append(errs, fmt.Sprintf("graph exceeds the maximum of %d nodes (got %d)", MaxNodes, len(g.Nodes)))
+	}
+	if len(g.Edges) > MaxEdges {
+		errs = append(errs, fmt.Sprintf("graph exceeds the maximum of %d edges (got %d)", MaxEdges, len(g.Edges)))
+	}
+	if len(errs) > 0 {
+		return &ValidationError{Errors: errs}
+	}
+
 	nodeSet := make(map[string]Node, len(g.Nodes))
 	for _, n := range g.Nodes {
 		nodeSet[n.ID] = n
 	}
 
 	adj := make(map[string][]string, len(g.Nodes))
-	inDegree := make(map[string]int, len(g.Nodes))
 	for _, n := range g.Nodes {
 		adj[n.ID] = []string{}
-		inDegree[n.ID] = 0
 	}
 	for _, e := range g.Edges {
 		if _, ok := nodeSet[e.Source]; !ok {
@@ -50,7 +63,6 @@ func Validate(g Graph) error {
 			continue
 		}
 		adj[e.Source] = append(adj[e.Source], e.Target)
-		inDegree[e.Target]++
 	}
 
 	if len(errs) > 0 {
@@ -66,6 +78,19 @@ func Validate(g Graph) error {
 		errs = append(errs, "graph must have exactly one START node")
 	} else if len(starts) > 1 {
 		errs = append(errs, "graph must have exactly one START node, found multiple")
+	}
+
+	if len(nodesOfType(g.Nodes, "END")) == 0 {
+		errs = append(errs, "graph must have at least one END node")
+	}
+
+	if len(starts) == 1 {
+		reachable := reachableFrom(adj, starts[0].ID)
+		for _, n := range g.Nodes {
+			if !reachable[n.ID] {
+				errs = append(errs, fmt.Sprintf("node %q (%s) is not reachable from the START node", n.ID, n.Type))
+			}
+		}
 	}
 
 	for _, n := range g.Nodes {
@@ -109,6 +134,22 @@ func detectCycle(adj map[string][]string, nodes []Node) string {
 		}
 	}
 	return ""
+}
+
+func reachableFrom(adj map[string][]string, start string) map[string]bool {
+	visited := map[string]bool{start: true}
+	queue := []string{start}
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		for _, next := range adj[id] {
+			if !visited[next] {
+				visited[next] = true
+				queue = append(queue, next)
+			}
+		}
+	}
+	return visited
 }
 
 func nodesOfType(nodes []Node, t string) []Node {

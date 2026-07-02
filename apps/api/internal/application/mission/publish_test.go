@@ -45,6 +45,12 @@ func (f *fakeVersionRepo) FindByHash(_ context.Context, _, _ uuid.UUID, _ string
 func (f *fakeVersionRepo) List(_ context.Context, _, _ uuid.UUID) ([]ports.MissionVersion, error) {
 	return f.listed, nil
 }
+func (f *fakeVersionRepo) FindActive(_ context.Context, _, _ uuid.UUID) (ports.MissionVersion, error) {
+	if f.existing != nil {
+		return *f.existing, nil
+	}
+	return ports.MissionVersion{}, apierr.NotFound("active mission version")
+}
 
 // fakeTxManager runs fn against a fixed set of repositories (no real transaction).
 type fakeTxManager struct{ repos ports.Repositories }
@@ -66,6 +72,10 @@ func (r *fakeRepos) Organizations() ports.OrganizationRepository { return nil }
 func (r *fakeRepos) Missions() ports.MissionRepository           { return r.missions }
 func (r *fakeRepos) MissionVersions() ports.MissionVersionRepository {
 	return r.versions
+}
+func (r *fakeRepos) Workspaces() ports.WorkspaceRepository { return nil }
+func (r *fakeRepos) OrganizationAPIKeys() ports.OrganizationAPIKeyRepository {
+	return nil
 }
 
 func publishTx(members ports.MemberRepository, missions ports.MissionRepository, versions ports.MissionVersionRepository) *fakeTxManager {

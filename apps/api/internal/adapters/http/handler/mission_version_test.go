@@ -19,6 +19,7 @@ import (
 type fakeVersionRepo struct {
 	listed  []ports.MissionVersion
 	findErr error
+	active  *ports.MissionVersion
 }
 
 func (f *fakeVersionRepo) Create(_ context.Context, v ports.MissionVersion) (ports.MissionVersion, error) {
@@ -33,6 +34,12 @@ func (f *fakeVersionRepo) FindByHash(_ context.Context, _, _ uuid.UUID, _ string
 }
 func (f *fakeVersionRepo) List(_ context.Context, _, _ uuid.UUID) ([]ports.MissionVersion, error) {
 	return f.listed, nil
+}
+func (f *fakeVersionRepo) FindActive(_ context.Context, _, _ uuid.UUID) (ports.MissionVersion, error) {
+	if f.active != nil {
+		return *f.active, nil
+	}
+	return ports.MissionVersion{}, apierr.NotFound("active mission version")
 }
 
 func newVersionHandler(mr ports.MissionRepository, vr ports.MissionVersionRepository, members ports.MemberRepository) *handler.MissionVersionHandler {

@@ -144,7 +144,7 @@ func TestRegister_Success_NormalizesAndHashes(t *testing.T) {
 func TestLogin_WrongPassword(t *testing.T) {
 	users := newFakeUserRepo()
 	users.users["a@b.com"] = storedUser(t, "a@b.com", "correct-horse")
-	uc := appauth.NewLoginUseCase(users, &fakeMemberRepo{}, "secret", 24)
+	uc := appauth.NewLoginUseCase(users, &fakeMemberRepo{}, "secret", 24, bcrypt.MinCost)
 
 	_, err := uc.Execute(context.Background(), appauth.LoginInput{Email: "a@b.com", Password: "wrong"})
 
@@ -152,7 +152,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 }
 
 func TestLogin_UnknownEmail(t *testing.T) {
-	uc := appauth.NewLoginUseCase(newFakeUserRepo(), &fakeMemberRepo{}, "secret", 24)
+	uc := appauth.NewLoginUseCase(newFakeUserRepo(), &fakeMemberRepo{}, "secret", 24, bcrypt.MinCost)
 
 	_, err := uc.Execute(context.Background(), appauth.LoginInput{Email: "ghost@b.com", Password: "whatever"})
 
@@ -163,7 +163,7 @@ func TestLogin_Success_NoOrg(t *testing.T) {
 	users := newFakeUserRepo()
 	u := storedUser(t, "a@b.com", "correct-horse")
 	users.users["a@b.com"] = u
-	uc := appauth.NewLoginUseCase(users, &fakeMemberRepo{}, "secret", 24)
+	uc := appauth.NewLoginUseCase(users, &fakeMemberRepo{}, "secret", 24, bcrypt.MinCost)
 
 	out, err := uc.Execute(context.Background(), appauth.LoginInput{Email: "a@b.com", Password: "correct-horse"})
 
@@ -186,7 +186,7 @@ func TestLogin_Success_WithOrgLoadsMembership(t *testing.T) {
 	members := &fakeMemberRepo{member: ports.Member{
 		ID: memberID, UserID: u.ID, OrganizationID: orgID, Role: member.RoleAdmin,
 	}}
-	uc := appauth.NewLoginUseCase(users, members, "secret", 24)
+	uc := appauth.NewLoginUseCase(users, members, "secret", 24, bcrypt.MinCost)
 
 	out, err := uc.Execute(context.Background(), appauth.LoginInput{
 		Email: "a@b.com", Password: "correct-horse", OrganizationID: orgID.String(),
@@ -199,12 +199,26 @@ func TestLogin_Success_WithOrgLoadsMembership(t *testing.T) {
 	assert.Equal(t, member.RoleAdmin, claims.Role)
 }
 
+func TestLogin_MalformedOrgID(t *testing.T) {
+	users := newFakeUserRepo()
+	u := storedUser(t, "a@b.com", "correct-horse")
+	users.users["a@b.com"] = u
+	uc := appauth.NewLoginUseCase(users, &fakeMemberRepo{}, "secret", 24, bcrypt.MinCost)
+
+	_, err := uc.Execute(context.Background(), appauth.LoginInput{
+		Email: "a@b.com", Password: "correct-horse", OrganizationID: "not-a-uuid",
+	})
+
+	require.Error(t, err)
+	assert.Equal(t, http.StatusForbidden, appErrCode(t, err), "malformed org id must look identical to not-a-member")
+}
+
 func TestLogin_NotAMemberOfOrg(t *testing.T) {
 	users := newFakeUserRepo()
 	u := storedUser(t, "a@b.com", "correct-horse")
 	users.users["a@b.com"] = u
 	members := &fakeMemberRepo{findErr: apierr.NotFound("member")}
-	uc := appauth.NewLoginUseCase(users, members, "secret", 24)
+	uc := appauth.NewLoginUseCase(users, members, "secret", 24, bcrypt.MinCost)
 
 	_, err := uc.Execute(context.Background(), appauth.LoginInput{
 		Email: "a@b.com", Password: "correct-horse", OrganizationID: uuid.New().String(),
