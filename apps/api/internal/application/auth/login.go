@@ -29,14 +29,15 @@ type LoginOutput struct {
 }
 
 type LoginUseCase struct {
-	users     ports.UserRepository
-	members   ports.MemberRepository
-	jwtSecret string
-	expiryH   int
+	users        ports.UserRepository
+	members      ports.MemberRepository
+	jwtSecret    string
+	expiryH      int
+	bcryptRounds int
 }
 
-func NewLoginUseCase(users ports.UserRepository, members ports.MemberRepository, jwtSecret string, expiryH int) *LoginUseCase {
-	return &LoginUseCase{users: users, members: members, jwtSecret: jwtSecret, expiryH: expiryH}
+func NewLoginUseCase(users ports.UserRepository, members ports.MemberRepository, jwtSecret string, expiryH, bcryptRounds int) *LoginUseCase {
+	return &LoginUseCase{users: users, members: members, jwtSecret: jwtSecret, expiryH: expiryH, bcryptRounds: bcryptRounds}
 }
 
 func (uc *LoginUseCase) Execute(ctx context.Context, in LoginInput) (LoginOutput, error) {
@@ -44,6 +45,7 @@ func (uc *LoginUseCase) Execute(ctx context.Context, in LoginInput) (LoginOutput
 
 	user, err := uc.users.FindByEmail(ctx, email)
 	if err != nil {
+		_, _ = bcrypt.GenerateFromPassword([]byte(in.Password), uc.bcryptRounds)
 		return LoginOutput{}, apierr.ErrBadLogin
 	}
 
@@ -60,7 +62,10 @@ func (uc *LoginUseCase) Execute(ctx context.Context, in LoginInput) (LoginOutput
 	}
 
 	if in.OrganizationID != "" {
-		orgID, _ := uuid.Parse(in.OrganizationID)
+		orgID, err := uuid.Parse(in.OrganizationID)
+		if err != nil {
+			return LoginOutput{}, apierr.Forbidden("not a member of this organization")
+		}
 		m, err := uc.members.FindByUserAndOrg(ctx, user.ID, orgID)
 		if err != nil {
 			return LoginOutput{}, apierr.Forbidden("not a member of this organization")

@@ -73,6 +73,10 @@ func (r *fakeRepos) Missions() ports.MissionRepository           { return r.miss
 func (r *fakeRepos) MissionVersions() ports.MissionVersionRepository {
 	return r.versions
 }
+func (r *fakeRepos) Workspaces() ports.WorkspaceRepository { return nil }
+func (r *fakeRepos) OrganizationAPIKeys() ports.OrganizationAPIKeyRepository {
+	return nil
+}
 
 func publishTx(members ports.MemberRepository, missions ports.MissionRepository, versions ports.MissionVersionRepository) *fakeTxManager {
 	return &fakeTxManager{repos: &fakeRepos{members: members, missions: missions, versions: versions}}

@@ -26,6 +26,12 @@ import (
 
 const maxRequestBody = "1M"
 
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	idleTimeout       = 60 * time.Second
+)
+
 type Config struct {
 	DBURL                    string
 	JWTSecret                string
@@ -65,7 +71,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 
 	// Use cases
 	registerUC := appauth.NewRegisterUseCase(store.Users(), cfg.BcryptRounds)
-	loginUC := appauth.NewLoginUseCase(store.Users(), memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours)
+	loginUC := appauth.NewLoginUseCase(store.Users(), memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptRounds)
 
 	createOrgUC := apporg.NewCreateUseCase(store)
 	listOrgUC := apporg.NewListUseCase(orgRepo)
@@ -114,6 +120,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 
 	e := echo.New()
 	e.HideBanner = true
+	configureTimeouts(e.Server)
 	e.IPExtractor = echo.ExtractIPDirect()
 	e.Validator = &echoValidator{v: validator.New()}
 	e.HTTPErrorHandler = errorHandler
@@ -198,11 +205,21 @@ func health(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func configureTimeouts(srv *http.Server) {
+	srv.ReadHeaderTimeout = readHeaderTimeout
+	srv.ReadTimeout = readTimeout
+	srv.IdleTimeout = idleTimeout
+}
+
 func (s *Server) Start() error {
 	if err := s.echo.Start(":" + s.port); err != nil && err != http.ErrServerClosed {
 		return err
 	}
 	return nil
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.echo.Shutdown(ctx)
 }
 
 func (s *Server) Close() {

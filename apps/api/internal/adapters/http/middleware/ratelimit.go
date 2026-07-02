@@ -38,7 +38,9 @@ func (s *limiterStore) get(key string, r rate.Limit, b int) *rate.Limiter {
 }
 
 func (s *limiterStore) cleanup() {
-	for range time.Tick(2 * time.Minute) {
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
 		s.mu.Lock()
 		for k, e := range s.limiters {
 			if time.Since(e.lastSeen) > 5*time.Minute {
@@ -54,6 +56,9 @@ func RateLimit(requestsPerMin int) echo.MiddlewareFunc {
 }
 
 func RateLimitByKey(requestsPerMin int, keyFn func(echo.Context) string) echo.MiddlewareFunc {
+	if requestsPerMin < 1 {
+		requestsPerMin = 1
+	}
 	store := newLimiterStore()
 	r := rate.Every(time.Minute / time.Duration(requestsPerMin))
 	return func(next echo.HandlerFunc) echo.HandlerFunc {

@@ -161,8 +161,10 @@ type Repositories interface {
 	Users() UserRepository
 	Members() MemberRepository
 	Organizations() OrganizationRepository
+	Workspaces() WorkspaceRepository
 	Missions() MissionRepository
 	MissionVersions() MissionVersionRepository
+	OrganizationAPIKeys() OrganizationAPIKeyRepository
 }
 
 type TxManager interface {

@@ -57,9 +57,15 @@ func (t *txRepos) Members() ports.MemberRepository { return repository.NewMember
 func (t *txRepos) Organizations() ports.OrganizationRepository {
 	return repository.NewOrganizationRepository(t.tx)
 }
+func (t *txRepos) Workspaces() ports.WorkspaceRepository {
+	return repository.NewWorkspaceRepository(t.tx)
+}
 func (t *txRepos) Missions() ports.MissionRepository {
 	return repository.NewMissionRepository(t.tx)
 }
 func (t *txRepos) MissionVersions() ports.MissionVersionRepository {
 	return repository.NewMissionVersionRepository(t.tx)
+}
+func (t *txRepos) OrganizationAPIKeys() ports.OrganizationAPIKeyRepository {
+	return repository.NewOrganizationAPIKeyRepository(t.tx)
 }
