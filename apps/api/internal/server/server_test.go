@@ -7,7 +7,8 @@ import (
 )
 
 func TestConfigureTimeouts(t *testing.T) {
-	srv := &http.Server{}
+	// placeholder value that configureTimeouts must overwrite
+	srv := &http.Server{ReadHeaderTimeout: time.Second}
 	configureTimeouts(srv)
 
 	if srv.ReadHeaderTimeout != 5*time.Second {

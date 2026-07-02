@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -25,6 +26,12 @@ const shutdownTimeout = 10 * time.Second
 // @in          header
 // @name        x-api-key
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	cfg := server.Config{
 		DBURL:                    mustEnv("DATABASE_URL"),
 		JWTSecret:                mustEnv("JWT_SECRET"),
@@ -39,13 +46,13 @@ func main() {
 	}
 
 	if len(cfg.JWTSecret) < 32 {
-		log.Fatalf("JWT_SECRET must be at least 32 bytes (got %d)", len(cfg.JWTSecret))
+		return fmt.Errorf("JWT_SECRET must be at least 32 bytes (got %d)", len(cfg.JWTSecret))
 	}
 	if cfg.ThrottleLimit <= 0 {
-		log.Fatalf("THROTTLE_LIMIT must be greater than 0 (got %d)", cfg.ThrottleLimit)
+		return fmt.Errorf("THROTTLE_LIMIT must be greater than 0 (got %d)", cfg.ThrottleLimit)
 	}
 	if cfg.EngineThrottleLimit <= 0 {
-		log.Fatalf("ENGINE_THROTTLE_LIMIT must be greater than 0 (got %d)", cfg.EngineThrottleLimit)
+		return fmt.Errorf("ENGINE_THROTTLE_LIMIT must be greater than 0 (got %d)", cfg.EngineThrottleLimit)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -53,7 +60,7 @@ func main() {
 
 	srv, err := server.New(ctx, cfg)
 	if err != nil {
-		log.Fatalf("init server: %v", err)
+		return fmt.Errorf("init server: %w", err)
 	}
 
 	errCh := make(chan error, 1)
@@ -64,7 +71,7 @@ func main() {
 	case err := <-errCh:
 		srv.Close()
 		if err != nil {
-			log.Fatalf("server: %v", err)
+			return fmt.Errorf("server: %w", err)
 		}
 	case <-ctx.Done():
 		log.Println("shutdown signal received, draining requests")
@@ -77,6 +84,7 @@ func main() {
 		srv.Close()
 		log.Println("shutdown complete")
 	}
+	return nil
 }
 
 func mustEnv(key string) string {
