@@ -39,7 +39,7 @@ jobs:
           go vet -tags=integration ./...
 
       - name: Lint (golangci-lint)
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.12.2
           working-directory: apps/api
