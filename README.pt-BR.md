@@ -83,7 +83,8 @@ Algumas decisões por trás da estrutura:
 - **Runtime:** Go 1.25
 - **Framework:** Echo v4 (HTTP)
 - **Banco:** PostgreSQL 17 via pgx v5 (SQL cru, sem ORM), golang-migrate
-- **Auth & segurança:** JWT (HS256), bcrypt, rate limiting por IP/rota, allowlist de CORS
+- **Auth & segurança:** JWT (HS256) com revogação por logout global, bcrypt, rate limiting por IP/rota, allowlist de CORS
+- **Observabilidade:** logs estruturados com slog (JSON em produção), propagação de `X-Request-ID`, métricas Prometheus em `/metrics`
 - **Validação:** go-playground/validator mais validadores de domínio
 - **Testes:** `testing` padrão mais testify (unit e integração atrás de build tag)
 - **Tooling:** golangci-lint, gofmt, lefthook (Conventional Commits e checks de pre-commit), Dependabot, GitHub Actions, Docker
@@ -148,6 +149,7 @@ docker compose up --build
 | `THROTTLE_LIMIT`               | Limite padrão de requisições por minuto (default `30`)     |
 | `ENGINE_THROTTLE_LIMIT`        | Rate limit por API key das rotas de engine UE5 (default `600`) |
 | `ENGINE_LAST_USED_THROTTLE_MS` | Intervalo mínimo entre escritas de `last_used_at` por key (default `60000`) |
+| `ENV`                          | `production` liga o modo produção: logs JSON, cookies `Secure`, sem Swagger UI |
 
 ## Rodar os testes
 
@@ -174,10 +176,11 @@ http://localhost:8080/swagger/index.html
 ```
 
 O spec OpenAPI fica em `apps/api/docs/` (gerado por `make generate` com swaggo/swag e checado contra
-drift na CI). Um endpoint de health está sempre disponível:
+drift na CI). Um endpoint de health e um de Prometheus estão sempre disponíveis:
 
 ```
-GET /health   ->   200 {"status":"ok"}
+GET /health    ->   200 {"status":"ok"}
+GET /metrics   ->   200 exposição Prometheus (rede interna, sem auth na v1)
 ```
 
 ## Qualidade de código
@@ -187,6 +190,9 @@ cd apps/api
 gofmt -l .            # formatação (deve ser vazio)
 golangci-lint run     # linters
 ```
+
+Módulos novos e mudanças de contrato começam por uma spec em `specs/` (fora do versionamento; o ciclo
+/spec → /build → /review); o template de PR exige mantê-la em sincronia.
 
 Os commits seguem o padrão [Conventional Commits](https://www.conventionalcommits.org/), imposto por
 um hook `commit-msg` do [lefthook](https://github.com/evilmartians/lefthook). O hook `pre-commit` roda
