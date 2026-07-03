@@ -5,6 +5,8 @@ package repository_test
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -15,9 +17,10 @@ import (
 
 	"github.com/novarod/polina/apps/api/internal/adapters/postgres/repository"
 	"github.com/novarod/polina/apps/api/internal/ports"
+	"github.com/novarod/polina/apps/api/pkg/apierr"
 )
 
-const migrationPath = "../../../../db/migrations/000001_init_schema.up.sql"
+const migrationsDir = "../../../../db/migrations"
 
 func setupDB(t *testing.T) *pgxpool.Pool {
 	t.Helper()
@@ -34,10 +37,16 @@ func setupDB(t *testing.T) *pgxpool.Pool {
 	_, err = pool.Exec(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public;`)
 	require.NoError(t, err)
 
-	migration, err := os.ReadFile(migrationPath)
+	migrations, err := filepath.Glob(filepath.Join(migrationsDir, "*.up.sql"))
 	require.NoError(t, err)
-	_, err = pool.Exec(ctx, string(migration))
-	require.NoError(t, err)
+	require.NotEmpty(t, migrations)
+	sort.Strings(migrations)
+	for _, path := range migrations {
+		migration, err := os.ReadFile(path)
+		require.NoError(t, err)
+		_, err = pool.Exec(ctx, string(migration))
+		require.NoError(t, err, "applying %s", path)
+	}
 
 	t.Cleanup(pool.Close)
 	return pool
@@ -78,4 +87,34 @@ func TestUserRepository_FindByEmail_NotFound(t *testing.T) {
 
 	_, err := repo.FindByEmail(context.Background(), "missing@example.com")
 	require.Error(t, err)
+}
+
+func TestUserRepository_BumpTokenValidAfter(t *testing.T) {
+	pool := setupDB(t)
+	repo := repository.NewUserRepository(pool)
+	ctx := context.Background()
+
+	u := newTestUser("bump@example.com")
+	_, err := repo.Create(ctx, u)
+	require.NoError(t, err)
+
+	before, err := repo.FindByID(ctx, u.ID)
+	require.NoError(t, err)
+	assert.Nil(t, before.TokenValidAfter)
+
+	require.NoError(t, repo.BumpTokenValidAfter(ctx, u.ID))
+
+	after, err := repo.FindByID(ctx, u.ID)
+	require.NoError(t, err)
+	require.NotNil(t, after.TokenValidAfter)
+	assert.WithinDuration(t, time.Now(), *after.TokenValidAfter, time.Minute)
+}
+
+func TestUserRepository_BumpTokenValidAfter_NotFound(t *testing.T) {
+	pool := setupDB(t)
+	repo := repository.NewUserRepository(pool)
+
+	err := repo.BumpTokenValidAfter(context.Background(), uuid.New())
+	require.Error(t, err)
+	assert.True(t, apierr.IsNotFound(err))
 }
