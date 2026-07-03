@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,7 +18,7 @@ func TestErrorHandler_NonHTTPError_HidesInternalDetail(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	errorHandler(errors.New("pgx: connection to secret-host failed: password=hunter2"), c)
+	newErrorHandler(slog.New(slog.DiscardHandler))(errors.New("pgx: connection to secret-host failed: password=hunter2"), c)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.NotContains(t, rec.Body.String(), "secret-host")
@@ -32,7 +33,7 @@ func TestErrorHandler_HTTPError_PreservesMessage(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	errorHandler(echo.NewHTTPError(http.StatusNotFound, "mission not found"), c)
+	newErrorHandler(slog.New(slog.DiscardHandler))(echo.NewHTTPError(http.StatusNotFound, "mission not found"), c)
 
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 	assert.Contains(t, rec.Body.String(), "mission not found")

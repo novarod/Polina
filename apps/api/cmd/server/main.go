@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"strconv"
@@ -27,14 +28,28 @@ const shutdownTimeout = 10 * time.Second
 // @name        x-api-key
 func main() {
 	if err := run(); err != nil {
-		log.Fatal(err)
+		slog.Error("fatal", "error", err)
+		os.Exit(1)
 	}
 }
 
 func run() error {
+	production := os.Getenv("ENV") == "production"
+	logger := newLogger(os.Stdout, production)
+	slog.SetDefault(logger)
+
+	dbURL, err := requireEnv("DATABASE_URL")
+	if err != nil {
+		return err
+	}
+	jwtSecret, err := requireEnv("JWT_SECRET")
+	if err != nil {
+		return err
+	}
+
 	cfg := server.Config{
-		DBURL:                    mustEnv("DATABASE_URL"),
-		JWTSecret:                mustEnv("JWT_SECRET"),
+		DBURL:                    dbURL,
+		JWTSecret:                jwtSecret,
 		JWTExpiryHours:           envInt("JWT_EXPIRY_HOURS", 24),
 		BcryptRounds:             envInt("BCRYPT_ROUNDS", 12),
 		Port:                     envStr("PORT", "8080"),
@@ -42,7 +57,8 @@ func run() error {
 		ThrottleLimit:            envInt("THROTTLE_LIMIT", 30),
 		EngineThrottleLimit:      envInt("ENGINE_THROTTLE_LIMIT", 600),
 		EngineLastUsedThrottleMs: envInt("ENGINE_LAST_USED_THROTTLE_MS", 60000),
-		Production:               os.Getenv("ENV") == "production",
+		Production:               production,
+		Logger:                   logger,
 	}
 
 	if len(cfg.JWTSecret) < 32 {
@@ -65,7 +81,7 @@ func run() error {
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Start() }()
-	log.Printf("Polina API listening on :%s", cfg.Port)
+	logger.Info("polina api listening", "port", cfg.Port)
 
 	select {
 	case err := <-errCh:
@@ -74,25 +90,32 @@ func run() error {
 			return fmt.Errorf("server: %w", err)
 		}
 	case <-ctx.Done():
-		log.Println("shutdown signal received, draining requests")
+		logger.Info("shutdown signal received, draining requests")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 		if err := srv.Shutdown(shutdownCtx); err != nil {
-			log.Printf("shutdown: %v", err)
+			logger.Error("shutdown", "error", err)
 		}
 		<-errCh
 		srv.Close()
-		log.Println("shutdown complete")
+		logger.Info("shutdown complete")
 	}
 	return nil
 }
 
-func mustEnv(key string) string {
+func newLogger(w io.Writer, production bool) *slog.Logger {
+	if production {
+		return slog.New(slog.NewJSONHandler(w, nil))
+	}
+	return slog.New(slog.NewTextHandler(w, nil))
+}
+
+func requireEnv(key string) (string, error) {
 	v := os.Getenv(key)
 	if v == "" {
-		log.Fatalf("missing required env var: %s", key)
+		return "", fmt.Errorf("missing required env var: %s", key)
 	}
-	return v
+	return v, nil
 }
 
 func envStr(key, def string) string {
