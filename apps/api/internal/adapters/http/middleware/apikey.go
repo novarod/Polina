@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/novarod/polina/apps/api/internal/ports"
+	"github.com/novarod/polina/apps/api/pkg/apierr"
 	"github.com/novarod/polina/apps/api/pkg/hash"
 )
 
@@ -25,7 +26,10 @@ func APIKeyAuth(keys ports.OrganizationAPIKeyRepository) echo.MiddlewareFunc {
 			}
 			key, err := keys.FindActiveByHash(c.Request().Context(), hash.APIKey(raw))
 			if err != nil {
-				return echo.NewHTTPError(http.StatusUnauthorized, "invalid api key")
+				if apierr.IsNotFound(err) {
+					return echo.NewHTTPError(http.StatusUnauthorized, "invalid api key")
+				}
+				return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 			}
 			c.Set(engineOrgKey, key.OrganizationID)
 			c.Set(engineKeyIDKey, key.ID)

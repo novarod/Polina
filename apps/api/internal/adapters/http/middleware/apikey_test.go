@@ -2,6 +2,7 @@ package middleware_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -74,6 +75,17 @@ func TestAPIKeyAuth_UnknownOrRevoked_401(t *testing.T) {
 	rec := httptest.NewRecorder()
 	echoWithAPIKey(repo).ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// An infrastructure failure (e.g. DB down) must surface as 500, not 401, so the
+// UE5 plugin retries with backoff instead of treating its key as revoked.
+func TestAPIKeyAuth_LookupInfraError_500(t *testing.T) {
+	repo := &fakeKeyRepo{findErr: errors.New("pgx: connection refused")}
+	req := httptest.NewRequest(http.MethodGet, "/engine/x", nil)
+	req.Header.Set("x-api-key", "pol_whatever")
+	rec := httptest.NewRecorder()
+	echoWithAPIKey(repo).ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
 func TestTouchAPIKey_CallsRepoAfterAuth(t *testing.T) {

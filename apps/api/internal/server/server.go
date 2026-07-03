@@ -33,7 +33,9 @@ const maxRequestBody = "1M"
 const (
 	readHeaderTimeout = 5 * time.Second
 	readTimeout       = 10 * time.Second
+	writeTimeout      = 30 * time.Second
 	idleTimeout       = 60 * time.Second
+	requestTimeout    = 15 * time.Second
 )
 
 type Config struct {
@@ -140,6 +142,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 
 	// Global middleware
 	useObservability(e, logger)
+	e.Use(echomiddleware.ContextTimeout(requestTimeout))
 	e.Use(echomiddleware.BodyLimit(maxRequestBody))
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     []string{cfg.FrontendURL},
@@ -232,6 +235,7 @@ func health(c echo.Context) error {
 func configureTimeouts(srv *http.Server) {
 	srv.ReadHeaderTimeout = readHeaderTimeout
 	srv.ReadTimeout = readTimeout
+	srv.WriteTimeout = writeTimeout
 	srv.IdleTimeout = idleTimeout
 }
 
