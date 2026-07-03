@@ -149,6 +149,7 @@ docker compose up --build
 | `THROTTLE_LIMIT`               | Limite padrão de requisições por minuto (default `30`)     |
 | `ENGINE_THROTTLE_LIMIT`        | Rate limit por API key das rotas de engine UE5 (default `600`) |
 | `ENGINE_LAST_USED_THROTTLE_MS` | Intervalo mínimo entre escritas de `last_used_at` por key (default `60000`) |
+| `ENV`                          | `production` liga o modo produção: logs JSON, cookies `Secure`, sem Swagger UI |
 
 ## Rodar os testes
 
@@ -190,7 +191,7 @@ gofmt -l .            # formatação (deve ser vazio)
 golangci-lint run     # linters
 ```
 
-Módulos novos e mudanças de contrato começam por uma spec em [`specs/`](./specs/) (o ciclo
+Módulos novos e mudanças de contrato começam por uma spec em `specs/` (fora do versionamento; o ciclo
 /spec → /build → /review); o template de PR exige mantê-la em sincronia.
 
 Os commits seguem o padrão [Conventional Commits](https://www.conventionalcommits.org/), imposto por

@@ -10,6 +10,7 @@ import (
 
 	"github.com/novarod/polina/apps/api/internal/application/token"
 	"github.com/novarod/polina/apps/api/internal/ports"
+	"github.com/novarod/polina/apps/api/pkg/apierr"
 )
 
 const claimsKey = "claims"
@@ -39,7 +40,10 @@ func Auth(jwtSecret string, users ports.UserRepository) echo.MiddlewareFunc {
 
 			user, err := users.FindByID(c.Request().Context(), claims.UserID)
 			if err != nil {
-				return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired session")
+				if apierr.IsNotFound(err) {
+					return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired session")
+				}
+				return echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
 			}
 			if revoked(claims, user.TokenValidAfter) {
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired session")

@@ -2,6 +2,7 @@ package middleware_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -24,7 +25,8 @@ const testSecret = "test-secret-at-least-32-bytes-long-0123"
 var _ ports.UserRepository = (*fakeUserRepo)(nil)
 
 type fakeUserRepo struct {
-	users map[uuid.UUID]ports.User
+	users   map[uuid.UUID]ports.User
+	findErr error
 }
 
 func newFakeUserRepo(users ...ports.User) *fakeUserRepo {
@@ -42,6 +44,9 @@ func (f *fakeUserRepo) FindByEmail(_ context.Context, _ string) (ports.User, err
 }
 
 func (f *fakeUserRepo) FindByID(_ context.Context, id uuid.UUID) (ports.User, error) {
+	if f.findErr != nil {
+		return ports.User{}, f.findErr
+	}
 	if u, ok := f.users[id]; ok {
 		return u, nil
 	}
@@ -127,6 +132,17 @@ func TestAuth_UserNotFound_401(t *testing.T) {
 	tok := signToken(t, testSecret, time.Now(), time.Now().Add(time.Hour), uuid.New())
 	rec := getProtected(echoWithAuth(newFakeUserRepo()), tok)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestAuth_UserLookupInfraError_500(t *testing.T) {
+	uid := uuid.New()
+	tok := signToken(t, testSecret, time.Now(), time.Now().Add(time.Hour), uid)
+	users := newFakeUserRepo(ports.User{ID: uid})
+	users.findErr = errors.New("pgx: connection refused")
+
+	rec := getProtected(echoWithAuth(users), tok)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
 func TestAuth_TokenIssuedBeforeCutoff_401(t *testing.T) {

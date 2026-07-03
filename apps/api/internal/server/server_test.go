@@ -31,6 +31,7 @@ func echoWithObservability() *echo.Echo {
 	e := echo.New()
 	useObservability(e, slog.New(slog.DiscardHandler))
 	e.GET("/ping", func(c echo.Context) error { return c.NoContent(http.StatusOK) })
+	e.GET("/boom", func(echo.Context) error { panic("boom") })
 	return e
 }
 
@@ -55,5 +56,21 @@ func TestObservability_MetricsEndpoint(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "go_goroutines") {
 		t.Fatal("metrics body is missing the go_goroutines gauge")
+	}
+}
+
+func TestObservability_PanicIsCountedAs500(t *testing.T) {
+	e := echoWithObservability()
+
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/boom", nil))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("panic status = %d, want 500", rec.Code)
+	}
+
+	metrics := httptest.NewRecorder()
+	e.ServeHTTP(metrics, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+	if !strings.Contains(metrics.Body.String(), `code="500"`) {
+		t.Fatal("metrics are missing the 500 counter for the recovered panic")
 	}
 }

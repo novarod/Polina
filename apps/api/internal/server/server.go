@@ -268,8 +268,6 @@ func useObservability(e *echo.Echo, logger *slog.Logger) {
 			return nil
 		},
 	}))
-	e.Use(echomiddleware.Recover())
-
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(
 		collectors.NewGoCollector(),
@@ -279,6 +277,7 @@ func useObservability(e *echo.Echo, logger *slog.Logger) {
 		Subsystem:  "polina_api",
 		Registerer: registry,
 	}))
+	e.Use(echomiddleware.Recover())
 	e.GET("/metrics", echoprometheus.NewHandlerWithConfig(echoprometheus.HandlerConfig{
 		Gatherer: registry,
 	}))
