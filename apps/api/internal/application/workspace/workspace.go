@@ -1,5 +1,3 @@
-// Package workspace holds the application use cases for the workspace module
-// (projects inside an organization).
 package workspace
 
 import (

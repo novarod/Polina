@@ -53,8 +53,6 @@ func (r *MissionVersionRepository) FindByHash(ctx context.Context, missionID, or
 	return v, nil
 }
 
-// FindActive returns the mission's currently active version by joining on
-// missions.active_hash, scoped by org. NotFound if nothing is active.
 func (r *MissionVersionRepository) FindActive(ctx context.Context, missionID, orgID uuid.UUID) (ports.MissionVersion, error) {
 	row := r.db.QueryRow(ctx, `
 		SELECT mv.id, mv.mission_id, mv.organization_id, mv.version_number, mv.hash, mv.graph, mv.mission_data, mv.published_by_id, mv.created_at
