@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	httpmw "github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
 	appauth "github.com/novarod/polina/apps/api/internal/application/auth"
 )
 
@@ -15,13 +16,14 @@ type CookieConfig struct {
 }
 
 type AuthHandler struct {
-	register *appauth.RegisterUseCase
-	login    *appauth.LoginUseCase
-	cookie   CookieConfig
+	register  *appauth.RegisterUseCase
+	login     *appauth.LoginUseCase
+	logoutAll *appauth.LogoutAllUseCase
+	cookie    CookieConfig
 }
 
-func NewAuthHandler(register *appauth.RegisterUseCase, login *appauth.LoginUseCase, cookie CookieConfig) *AuthHandler {
-	return &AuthHandler{register: register, login: login, cookie: cookie}
+func NewAuthHandler(register *appauth.RegisterUseCase, login *appauth.LoginUseCase, logoutAll *appauth.LogoutAllUseCase, cookie CookieConfig) *AuthHandler {
+	return &AuthHandler{register: register, login: login, logoutAll: logoutAll, cookie: cookie}
 }
 
 type loginResponse struct {
@@ -86,6 +88,26 @@ func (h *AuthHandler) Login(c echo.Context) error {
 // @Success  204  "no content"
 // @Router   /auth/logout [post]
 func (h *AuthHandler) Logout(c echo.Context) error {
+	h.clearSessionCookie(c)
+	return c.NoContent(http.StatusNoContent)
+}
+
+// @Summary  Log out everywhere (revoke all sessions)
+// @Tags     auth
+// @Security BearerAuth
+// @Success  204  "no content"
+// @Failure  401  {object}  map[string]string  "missing or invalid session"
+// @Router   /auth/logout-all [post]
+func (h *AuthHandler) LogoutAll(c echo.Context) error {
+	claims := httpmw.MustGetClaims(c)
+	if err := h.logoutAll.Execute(c.Request().Context(), claims.UserID); err != nil {
+		return mapError(err)
+	}
+	h.clearSessionCookie(c)
+	return c.NoContent(http.StatusNoContent)
+}
+
+func (h *AuthHandler) clearSessionCookie(c echo.Context) {
 	c.SetCookie(&http.Cookie{
 		Name:     "session",
 		Value:    "",
@@ -95,5 +117,4 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 		Secure:   h.cookie.Secure,
 		SameSite: http.SameSiteStrictMode,
 	})
-	return c.NoContent(http.StatusNoContent)
 }

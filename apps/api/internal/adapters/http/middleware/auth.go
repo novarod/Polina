@@ -3,16 +3,18 @@ package middleware
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 
 	"github.com/novarod/polina/apps/api/internal/application/token"
+	"github.com/novarod/polina/apps/api/internal/ports"
 )
 
 const claimsKey = "claims"
 
-func Auth(jwtSecret string) echo.MiddlewareFunc {
+func Auth(jwtSecret string, users ports.UserRepository) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			cookie, err := c.Cookie("session")
@@ -35,10 +37,28 @@ func Auth(jwtSecret string) echo.MiddlewareFunc {
 				return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired session")
 			}
 
+			user, err := users.FindByID(c.Request().Context(), claims.UserID)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired session")
+			}
+			if revoked(claims, user.TokenValidAfter) {
+				return echo.NewHTTPError(http.StatusUnauthorized, "invalid or expired session")
+			}
+
 			c.Set(claimsKey, claims)
 			return next(c)
 		}
 	}
+}
+
+func revoked(claims *token.Claims, tokenValidAfter *time.Time) bool {
+	if tokenValidAfter == nil {
+		return false
+	}
+	if claims.IssuedAt == nil {
+		return true
+	}
+	return claims.IssuedAt.Before(tokenValidAfter.Truncate(time.Second))
 }
 
 func MustGetClaims(c echo.Context) *token.Claims {
