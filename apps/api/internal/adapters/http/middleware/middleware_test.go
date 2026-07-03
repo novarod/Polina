@@ -1,6 +1,7 @@
 package middleware_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,37 +15,78 @@ import (
 
 	httpmw "github.com/novarod/polina/apps/api/internal/adapters/http/middleware"
 	"github.com/novarod/polina/apps/api/internal/application/token"
+	"github.com/novarod/polina/apps/api/internal/ports"
+	"github.com/novarod/polina/apps/api/pkg/apierr"
 )
 
 const testSecret = "test-secret-at-least-32-bytes-long-0123"
 
-func signToken(t *testing.T, secret string, expiresAt time.Time, userID uuid.UUID) string {
+var _ ports.UserRepository = (*fakeUserRepo)(nil)
+
+type fakeUserRepo struct {
+	users map[uuid.UUID]ports.User
+}
+
+func newFakeUserRepo(users ...ports.User) *fakeUserRepo {
+	f := &fakeUserRepo{users: make(map[uuid.UUID]ports.User, len(users))}
+	for _, u := range users {
+		f.users[u.ID] = u
+	}
+	return f
+}
+
+func (f *fakeUserRepo) Create(_ context.Context, u ports.User) (ports.User, error) { return u, nil }
+
+func (f *fakeUserRepo) FindByEmail(_ context.Context, _ string) (ports.User, error) {
+	return ports.User{}, apierr.NotFound("user")
+}
+
+func (f *fakeUserRepo) FindByID(_ context.Context, id uuid.UUID) (ports.User, error) {
+	if u, ok := f.users[id]; ok {
+		return u, nil
+	}
+	return ports.User{}, apierr.NotFound("user")
+}
+
+func (f *fakeUserRepo) BumpTokenValidAfter(_ context.Context, _ uuid.UUID) error { return nil }
+
+func signToken(t *testing.T, secret string, issuedAt, expiresAt time.Time, userID uuid.UUID) string {
 	t.Helper()
 	claims := &token.Claims{
-		UserID:           userID,
-		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(expiresAt)},
+		UserID: userID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			IssuedAt:  jwt.NewNumericDate(issuedAt),
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+		},
 	}
 	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(secret))
 	require.NoError(t, err)
 	return s
 }
 
-func echoWithAuth() *echo.Echo {
+func echoWithAuth(users ports.UserRepository) *echo.Echo {
 	e := echo.New()
 	e.GET("/protected", func(c echo.Context) error {
 		return c.String(http.StatusOK, httpmw.MustGetClaims(c).UserID.String())
-	}, httpmw.Auth(testSecret))
+	}, httpmw.Auth(testSecret, users))
 	return e
+}
+
+func getProtected(e *echo.Echo, tok string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+	if tok != "" {
+		req.Header.Set(echo.HeaderAuthorization, "Bearer "+tok)
+	}
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	return rec
 }
 
 func TestAuth_ValidBearer_PassesAndSetsClaims(t *testing.T) {
 	uid := uuid.New()
-	tok := signToken(t, testSecret, time.Now().Add(time.Hour), uid)
+	tok := signToken(t, testSecret, time.Now(), time.Now().Add(time.Hour), uid)
 
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	req.Header.Set(echo.HeaderAuthorization, "Bearer "+tok)
-	rec := httptest.NewRecorder()
-	echoWithAuth().ServeHTTP(rec, req)
+	rec := getProtected(echoWithAuth(newFakeUserRepo(ports.User{ID: uid})), tok)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, uid.String(), rec.Body.String())
@@ -52,38 +94,76 @@ func TestAuth_ValidBearer_PassesAndSetsClaims(t *testing.T) {
 
 func TestAuth_ValidCookie_Passes(t *testing.T) {
 	uid := uuid.New()
-	tok := signToken(t, testSecret, time.Now().Add(time.Hour), uid)
+	tok := signToken(t, testSecret, time.Now(), time.Now().Add(time.Hour), uid)
 
 	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
 	req.Header.Set("Cookie", "session="+tok)
 	rec := httptest.NewRecorder()
-	echoWithAuth().ServeHTTP(rec, req)
+	echoWithAuth(newFakeUserRepo(ports.User{ID: uid})).ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
 func TestAuth_MissingToken_401(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	rec := httptest.NewRecorder()
-	echoWithAuth().ServeHTTP(rec, req)
+	rec := getProtected(echoWithAuth(newFakeUserRepo()), "")
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
 func TestAuth_WrongSecret_401(t *testing.T) {
-	tok := signToken(t, "a-different-secret-of-at-least-32-bytes!", time.Now().Add(time.Hour), uuid.New())
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	req.Header.Set(echo.HeaderAuthorization, "Bearer "+tok)
-	rec := httptest.NewRecorder()
-	echoWithAuth().ServeHTTP(rec, req)
+	uid := uuid.New()
+	tok := signToken(t, "a-different-secret-of-at-least-32-bytes!", time.Now(), time.Now().Add(time.Hour), uid)
+	rec := getProtected(echoWithAuth(newFakeUserRepo(ports.User{ID: uid})), tok)
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
 func TestAuth_Expired_401(t *testing.T) {
-	tok := signToken(t, testSecret, time.Now().Add(-time.Hour), uuid.New())
-	req := httptest.NewRequest(http.MethodGet, "/protected", nil)
-	req.Header.Set(echo.HeaderAuthorization, "Bearer "+tok)
-	rec := httptest.NewRecorder()
-	echoWithAuth().ServeHTTP(rec, req)
+	uid := uuid.New()
+	tok := signToken(t, testSecret, time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour), uid)
+	rec := getProtected(echoWithAuth(newFakeUserRepo(ports.User{ID: uid})), tok)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestAuth_UserNotFound_401(t *testing.T) {
+	tok := signToken(t, testSecret, time.Now(), time.Now().Add(time.Hour), uuid.New())
+	rec := getProtected(echoWithAuth(newFakeUserRepo()), tok)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestAuth_TokenIssuedBeforeCutoff_401(t *testing.T) {
+	uid := uuid.New()
+	cutoff := time.Now()
+	tok := signToken(t, testSecret, cutoff.Add(-time.Hour), cutoff.Add(time.Hour), uid)
+
+	rec := getProtected(echoWithAuth(newFakeUserRepo(ports.User{ID: uid, TokenValidAfter: &cutoff})), tok)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// The cutoff is truncated to seconds so a token issued right after a logout-all,
+// within the same second, must stay valid.
+func TestAuth_TokenIssuedSameSecondAsCutoff_Passes(t *testing.T) {
+	uid := uuid.New()
+	issuedAt := time.Now().Truncate(time.Second)
+	cutoff := issuedAt.Add(500 * time.Millisecond)
+	tok := signToken(t, testSecret, issuedAt, issuedAt.Add(time.Hour), uid)
+
+	rec := getProtected(echoWithAuth(newFakeUserRepo(ports.User{ID: uid, TokenValidAfter: &cutoff})), tok)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestAuth_TokenWithoutIatAndCutoffSet_401(t *testing.T) {
+	uid := uuid.New()
+	cutoff := time.Now()
+	claims := &token.Claims{
+		UserID:           uid,
+		RegisteredClaims: jwt.RegisteredClaims{ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour))},
+	}
+	tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(testSecret))
+	require.NoError(t, err)
+
+	rec := getProtected(echoWithAuth(newFakeUserRepo(ports.User{ID: uid, TokenValidAfter: &cutoff})), tok)
+
 	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 

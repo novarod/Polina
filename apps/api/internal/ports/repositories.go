@@ -12,18 +12,20 @@ import (
 // --- User ---
 
 type User struct {
-	ID        uuid.UUID
-	Email     string
-	Name      string
-	Password  string
-	CreatedAt time.Time
-	DeletedAt *time.Time
+	ID              uuid.UUID
+	Email           string
+	Name            string
+	Password        string
+	TokenValidAfter *time.Time
+	CreatedAt       time.Time
+	DeletedAt       *time.Time
 }
 
 type UserRepository interface {
 	Create(ctx context.Context, u User) (User, error)
 	FindByEmail(ctx context.Context, email string) (User, error)
 	FindByID(ctx context.Context, id uuid.UUID) (User, error)
+	BumpTokenValidAfter(ctx context.Context, id uuid.UUID) error
 }
 
 // --- Member ---

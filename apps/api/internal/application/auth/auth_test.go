@@ -30,6 +30,8 @@ type fakeUserRepo struct {
 	users     map[string]ports.User // keyed by stored email
 	createErr error
 	created   *ports.User
+	bumpErr   error
+	bumpedID  *uuid.UUID
 }
 
 func newFakeUserRepo() *fakeUserRepo {
@@ -60,6 +62,14 @@ func (f *fakeUserRepo) FindByID(_ context.Context, id uuid.UUID) (ports.User, er
 		}
 	}
 	return ports.User{}, apierr.NotFound("user")
+}
+
+func (f *fakeUserRepo) BumpTokenValidAfter(_ context.Context, id uuid.UUID) error {
+	if f.bumpErr != nil {
+		return f.bumpErr
+	}
+	f.bumpedID = &id
+	return nil
 }
 
 type fakeMemberRepo struct {
@@ -211,6 +221,30 @@ func TestLogin_MalformedOrgID(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Equal(t, http.StatusForbidden, appErrCode(t, err), "malformed org id must look identical to not-a-member")
+}
+
+// --- LogoutAll ---
+
+func TestLogoutAll_BumpsTokenValidAfter(t *testing.T) {
+	users := newFakeUserRepo()
+	uc := appauth.NewLogoutAllUseCase(users)
+	userID := uuid.New()
+
+	require.NoError(t, uc.Execute(context.Background(), userID))
+
+	require.NotNil(t, users.bumpedID)
+	assert.Equal(t, userID, *users.bumpedID)
+}
+
+func TestLogoutAll_PropagatesError(t *testing.T) {
+	users := newFakeUserRepo()
+	users.bumpErr = apierr.NotFound("user")
+	uc := appauth.NewLogoutAllUseCase(users)
+
+	err := uc.Execute(context.Background(), uuid.New())
+
+	require.Error(t, err)
+	assert.Equal(t, http.StatusNotFound, appErrCode(t, err))
 }
 
 func TestLogin_NotAMemberOfOrg(t *testing.T) {

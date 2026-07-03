@@ -66,12 +66,14 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 
 	// Store (repositories + transaction manager)
 	store := postgres.NewStore(pool)
+	userRepo := store.Users()
 	orgRepo := store.Organizations()
 	memberRepo := store.Members()
 
 	// Use cases
-	registerUC := appauth.NewRegisterUseCase(store.Users(), cfg.BcryptRounds)
-	loginUC := appauth.NewLoginUseCase(store.Users(), memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptRounds)
+	registerUC := appauth.NewRegisterUseCase(userRepo, cfg.BcryptRounds)
+	loginUC := appauth.NewLoginUseCase(userRepo, memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptRounds)
+	logoutAllUC := appauth.NewLogoutAllUseCase(userRepo)
 
 	createOrgUC := apporg.NewCreateUseCase(store)
 	listOrgUC := apporg.NewListUseCase(orgRepo)
@@ -107,7 +109,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	engineContractUC := appengine.NewGetActiveContractUseCase(missionVersionRepo)
 
 	// Handlers
-	authHandler := handler.NewAuthHandler(registerUC, loginUC, handler.CookieConfig{
+	authHandler := handler.NewAuthHandler(registerUC, loginUC, logoutAllUC, handler.CookieConfig{
 		Secure:      cfg.Production,
 		ExpiryHours: cfg.JWTExpiryHours,
 	})
@@ -135,16 +137,19 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 		AllowCredentials: true,
 	}))
 
+	authMW := httpmw.Auth(cfg.JWTSecret, userRepo)
+
 	// Auth routes (rate-limited)
 	auth := e.Group("/auth")
 	auth.Use(httpmw.RateLimit(cfg.ThrottleLimit))
 	auth.POST("/register", authHandler.Register, httpmw.RateLimit(5))
 	auth.POST("/login", authHandler.Login, httpmw.RateLimit(5))
 	auth.POST("/logout", authHandler.Logout)
+	auth.POST("/logout-all", authHandler.LogoutAll, authMW)
 
 	// Organization routes (authenticated)
 	orgs := e.Group("/organizations")
-	orgs.Use(httpmw.Auth(cfg.JWTSecret))
+	orgs.Use(authMW)
 	orgs.POST("", orgHandler.Create)
 	orgs.GET("", orgHandler.List)
 	orgs.GET("/:id", orgHandler.Get)

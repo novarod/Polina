@@ -280,6 +280,22 @@ paths:
       summary: Log out
       tags:
       - auth
+  /auth/logout-all:
+    post:
+      responses:
+        "204":
+          description: no content
+        "401":
+          description: missing or invalid session
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Log out everywhere (revoke all sessions)
+      tags:
+      - auth
   /auth/register:
     post:
       consumes:

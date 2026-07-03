@@ -20,7 +20,7 @@ func (r *UserRepository) Create(ctx context.Context, u ports.User) (ports.User, 
 	row := r.db.QueryRow(ctx, `
 		INSERT INTO users (id, email, name, password, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $5)
-		RETURNING id, email, name, password, created_at, deleted_at`,
+		RETURNING id, email, name, password, token_valid_after, created_at, deleted_at`,
 		u.ID, u.Email, u.Name, u.Password, u.CreatedAt,
 	)
 	return scanUser(row)
@@ -28,7 +28,7 @@ func (r *UserRepository) Create(ctx context.Context, u ports.User) (ports.User, 
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (ports.User, error) {
 	row := r.db.QueryRow(ctx, `
-		SELECT id, email, name, password, created_at, deleted_at
+		SELECT id, email, name, password, token_valid_after, created_at, deleted_at
 		FROM users WHERE email = $1 AND deleted_at IS NULL`,
 		strings.ToLower(email),
 	)
@@ -44,7 +44,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (ports.U
 
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (ports.User, error) {
 	row := r.db.QueryRow(ctx, `
-		SELECT id, email, name, password, created_at, deleted_at
+		SELECT id, email, name, password, token_valid_after, created_at, deleted_at
 		FROM users WHERE id = $1 AND deleted_at IS NULL`, id,
 	)
 	u, err := scanUser(row)
@@ -57,10 +57,25 @@ func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (ports.User
 	return u, nil
 }
 
+func (r *UserRepository) BumpTokenValidAfter(ctx context.Context, id uuid.UUID) error {
+	tag, err := r.db.Exec(ctx, `
+		UPDATE users SET token_valid_after = NOW(), updated_at = NOW()
+		WHERE id = $1 AND deleted_at IS NULL`, id,
+	)
+	if err != nil {
+		return fmt.Errorf("user.BumpTokenValidAfter: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apierr.NotFound("user")
+	}
+	return nil
+}
+
 func scanUser(row pgx.Row) (ports.User, error) {
 	var u ports.User
-	var deletedAt *time.Time
-	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.Password, &u.CreatedAt, &deletedAt)
+	var tokenValidAfter, deletedAt *time.Time
+	err := row.Scan(&u.ID, &u.Email, &u.Name, &u.Password, &tokenValidAfter, &u.CreatedAt, &deletedAt)
+	u.TokenValidAfter = tokenValidAfter
 	u.DeletedAt = deletedAt
 	return u, err
 }
