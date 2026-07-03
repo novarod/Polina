@@ -119,9 +119,11 @@ func TestRateLimitByEngineKey_PerKey_NotPerIP(t *testing.T) {
 	keyB := ports.OrganizationAPIKey{ID: uuid.New(), OrganizationID: uuid.New()}
 	repo := &seqKeyRepo{keys: []ports.OrganizationAPIKey{keyA, keyA, keyB}} // A, A, then B
 
+	limitMW, stop := httpmw.RateLimitByEngineKey(1)
+	defer stop()
 	e := echo.New()
 	e.GET("/engine/x", func(c echo.Context) error { return c.NoContent(http.StatusOK) },
-		httpmw.APIKeyAuth(repo), httpmw.RateLimitByEngineKey(1))
+		httpmw.APIKeyAuth(repo), limitMW)
 
 	codes := make([]int, 3)
 	for i := 0; i < 3; i++ {

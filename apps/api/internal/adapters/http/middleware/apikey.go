@@ -42,7 +42,7 @@ func MustGetEngineOrg(c echo.Context) uuid.UUID {
 	return orgID
 }
 
-func RateLimitByEngineKey(requestsPerMin int) echo.MiddlewareFunc {
+func RateLimitByEngineKey(requestsPerMin int) (echo.MiddlewareFunc, func()) {
 	return RateLimitByKey(requestsPerMin, func(c echo.Context) string {
 		if id, ok := c.Get(engineKeyIDKey).(uuid.UUID); ok {
 			return id.String()
