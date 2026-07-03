@@ -11,12 +11,13 @@ import (
 
 	missiondomain "github.com/novarod/polina/apps/api/internal/domain/mission"
 	"github.com/novarod/polina/apps/api/pkg/apierr"
+	"github.com/novarod/polina/apps/api/pkg/dag"
 )
 
 func TestValidateGraph_TooManyNodes_422(t *testing.T) {
 	var b strings.Builder
 	b.WriteString(`{"nodes":[`)
-	for i := 0; i <= 10000; i++ { // 10001 > maxGraphNodes
+	for i := 0; i <= dag.MaxNodes; i++ {
 		if i > 0 {
 			b.WriteByte(',')
 		}
@@ -29,5 +30,5 @@ func TestValidateGraph_TooManyNodes_422(t *testing.T) {
 	var appErr *apierr.AppError
 	require.ErrorAs(t, err, &appErr)
 	assert.Equal(t, http.StatusUnprocessableEntity, appErr.Code)
-	assert.Contains(t, appErr.Message, "too many nodes")
+	assert.Contains(t, appErr.Message, fmt.Sprintf("exceeds the maximum of %d nodes", dag.MaxNodes))
 }

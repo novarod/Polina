@@ -51,9 +51,10 @@ type Config struct {
 }
 
 type Server struct {
-	echo *echo.Echo
-	pool *pgxpool.Pool
-	port string
+	echo    *echo.Echo
+	pool    *pgxpool.Pool
+	port    string
+	closers []func()
 }
 
 func New(ctx context.Context, cfg Config) (*Server, error) {
@@ -147,12 +148,15 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	}))
 
 	authMW := httpmw.Auth(cfg.JWTSecret, userRepo)
+	authThrottleMW, authThrottleStop := httpmw.RateLimit(cfg.ThrottleLimit)
+	registerThrottleMW, registerThrottleStop := httpmw.RateLimit(5)
+	loginThrottleMW, loginThrottleStop := httpmw.RateLimit(5)
 
 	// Auth routes (rate-limited)
 	auth := e.Group("/auth")
-	auth.Use(httpmw.RateLimit(cfg.ThrottleLimit))
-	auth.POST("/register", authHandler.Register, httpmw.RateLimit(5))
-	auth.POST("/login", authHandler.Login, httpmw.RateLimit(5))
+	auth.Use(authThrottleMW)
+	auth.POST("/register", authHandler.Register, registerThrottleMW)
+	auth.POST("/login", authHandler.Login, loginThrottleMW)
 	auth.POST("/logout", authHandler.Logout)
 	auth.POST("/logout-all", authHandler.LogoutAll, authMW)
 
@@ -192,9 +196,10 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 
 	// Engine routes (UE5 plugin, x-api-key auth — outside the JWT group)
 	engineThrottle := time.Duration(cfg.EngineLastUsedThrottleMs) * time.Millisecond
+	engineThrottleMW, engineThrottleStop := httpmw.RateLimitByEngineKey(cfg.EngineThrottleLimit)
 	engine := e.Group("/engine")
 	engine.Use(httpmw.APIKeyAuth(apiKeyRepo))
-	engine.Use(httpmw.RateLimitByEngineKey(cfg.EngineThrottleLimit))
+	engine.Use(engineThrottleMW)
 	engine.Use(httpmw.TouchAPIKey(apiKeyRepo, engineThrottle))
 	engine.GET("/missions/:missionID/active/hash", engineHandler.ActiveHash)
 	engine.GET("/missions/:missionID/active", engineHandler.ActiveContract)
@@ -207,7 +212,12 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 		e.GET("/swagger/*", echoSwagger.WrapHandler)
 	}
 
-	return &Server{echo: e, pool: pool, port: cfg.Port}, nil
+	return &Server{
+		echo:    e,
+		pool:    pool,
+		port:    cfg.Port,
+		closers: []func(){authThrottleStop, registerThrottleStop, loginThrottleStop, engineThrottleStop},
+	}, nil
 }
 
 // @Summary  Health check
@@ -286,6 +296,9 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) Close() {
+	for _, stop := range s.closers {
+		stop()
+	}
 	s.pool.Close()
 }
 

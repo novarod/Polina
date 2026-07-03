@@ -168,10 +168,12 @@ func TestAuth_TokenWithoutIatAndCutoffSet_401(t *testing.T) {
 }
 
 func TestRateLimit_ZeroLimitDoesNotPanic(t *testing.T) {
+	mw, stop := httpmw.RateLimit(0) // clamped to 1 req/min instead of panicking
+	defer stop()
 	e := echo.New()
 	e.GET("/limited", func(c echo.Context) error {
 		return c.NoContent(http.StatusOK)
-	}, httpmw.RateLimit(0)) // clamped to 1 req/min instead of panicking
+	}, mw)
 
 	req := httptest.NewRequest(http.MethodGet, "/limited", nil)
 	req.RemoteAddr = "203.0.113.8:5555"
@@ -181,10 +183,12 @@ func TestRateLimit_ZeroLimitDoesNotPanic(t *testing.T) {
 }
 
 func TestRateLimit_AllowsUpToLimitThenBlocks(t *testing.T) {
+	mw, stop := httpmw.RateLimit(2) // burst of 2
+	defer stop()
 	e := echo.New()
 	e.GET("/limited", func(c echo.Context) error {
 		return c.NoContent(http.StatusOK)
-	}, httpmw.RateLimit(2)) // burst of 2
+	}, mw)
 
 	codes := make([]int, 0, 3)
 	for i := 0; i < 3; i++ {

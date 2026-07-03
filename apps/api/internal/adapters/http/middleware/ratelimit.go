@@ -10,8 +10,11 @@ import (
 )
 
 type limiterStore struct {
-	mu       sync.Mutex
-	limiters map[string]*rateLimiterEntry
+	mu        sync.Mutex
+	limiters  map[string]*rateLimiterEntry
+	stop      chan struct{}
+	done      chan struct{}
+	closeOnce sync.Once
 }
 
 type rateLimiterEntry struct {
@@ -20,7 +23,11 @@ type rateLimiterEntry struct {
 }
 
 func newLimiterStore() *limiterStore {
-	s := &limiterStore{limiters: make(map[string]*rateLimiterEntry)}
+	s := &limiterStore{
+		limiters: make(map[string]*rateLimiterEntry),
+		stop:     make(chan struct{}),
+		done:     make(chan struct{}),
+	}
 	go s.cleanup()
 	return s
 }
@@ -38,30 +45,41 @@ func (s *limiterStore) get(key string, r rate.Limit, b int) *rate.Limiter {
 }
 
 func (s *limiterStore) cleanup() {
+	defer close(s.done)
 	ticker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
-	for range ticker.C {
-		s.mu.Lock()
-		for k, e := range s.limiters {
-			if time.Since(e.lastSeen) > 5*time.Minute {
-				delete(s.limiters, k)
+	for {
+		select {
+		case <-ticker.C:
+			s.mu.Lock()
+			for k, e := range s.limiters {
+				if time.Since(e.lastSeen) > 5*time.Minute {
+					delete(s.limiters, k)
+				}
 			}
+			s.mu.Unlock()
+		case <-s.stop:
+			return
 		}
-		s.mu.Unlock()
 	}
 }
 
-func RateLimit(requestsPerMin int) echo.MiddlewareFunc {
+func (s *limiterStore) Close() {
+	s.closeOnce.Do(func() { close(s.stop) })
+	<-s.done
+}
+
+func RateLimit(requestsPerMin int) (echo.MiddlewareFunc, func()) {
 	return RateLimitByKey(requestsPerMin, func(c echo.Context) string { return c.RealIP() })
 }
 
-func RateLimitByKey(requestsPerMin int, keyFn func(echo.Context) string) echo.MiddlewareFunc {
+func RateLimitByKey(requestsPerMin int, keyFn func(echo.Context) string) (echo.MiddlewareFunc, func()) {
 	if requestsPerMin < 1 {
 		requestsPerMin = 1
 	}
 	store := newLimiterStore()
 	r := rate.Every(time.Minute / time.Duration(requestsPerMin))
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
+	mw := func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if !store.get(keyFn(c), r, requestsPerMin).Allow() {
 				return echo.NewHTTPError(http.StatusTooManyRequests, "rate limit exceeded")
@@ -69,4 +87,5 @@ func RateLimitByKey(requestsPerMin int, keyFn func(echo.Context) string) echo.Mi
 			return next(c)
 		}
 	}
+	return mw, store.Close
 }
