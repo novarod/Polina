@@ -3,13 +3,17 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/labstack/echo-contrib/echoprometheus"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	echoSwagger "github.com/swaggo/echo-swagger"
 
 	_ "github.com/novarod/polina/apps/api/docs"
@@ -43,6 +47,7 @@ type Config struct {
 	EngineThrottleLimit      int
 	EngineLastUsedThrottleMs int
 	Production               bool
+	Logger                   *slog.Logger
 }
 
 type Server struct {
@@ -52,6 +57,11 @@ type Server struct {
 }
 
 func New(ctx context.Context, cfg Config) (*Server, error) {
+	logger := cfg.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+
 	pool, err := pgxpool.New(ctx, cfg.DBURL)
 	if err != nil {
 		return nil, fmt.Errorf("connect db: %w", err)
@@ -125,11 +135,10 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	configureTimeouts(e.Server)
 	e.IPExtractor = echo.ExtractIPDirect()
 	e.Validator = &echoValidator{v: validator.New()}
-	e.HTTPErrorHandler = errorHandler
+	e.HTTPErrorHandler = newErrorHandler(logger)
 
 	// Global middleware
-	e.Use(echomiddleware.Logger())
-	e.Use(echomiddleware.Recover())
+	useObservability(e, logger)
 	e.Use(echomiddleware.BodyLimit(maxRequestBody))
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     []string{cfg.FrontendURL},
@@ -216,6 +225,55 @@ func configureTimeouts(srv *http.Server) {
 	srv.IdleTimeout = idleTimeout
 }
 
+func useObservability(e *echo.Echo, logger *slog.Logger) {
+	e.Use(echomiddleware.RequestID())
+	e.Use(echomiddleware.RequestLoggerWithConfig(echomiddleware.RequestLoggerConfig{
+		LogMethod:    true,
+		LogURI:       true,
+		LogStatus:    true,
+		LogLatency:   true,
+		LogRemoteIP:  true,
+		LogRequestID: true,
+		LogError:     true,
+		LogValuesFunc: func(c echo.Context, v echomiddleware.RequestLoggerValues) error {
+			level := slog.LevelInfo
+			switch {
+			case v.Status >= http.StatusInternalServerError:
+				level = slog.LevelError
+			case v.Status >= http.StatusBadRequest:
+				level = slog.LevelWarn
+			}
+			attrs := []slog.Attr{
+				slog.String("method", v.Method),
+				slog.String("uri", v.URI),
+				slog.Int("status", v.Status),
+				slog.Duration("latency", v.Latency),
+				slog.String("ip", v.RemoteIP),
+				slog.String("request_id", v.RequestID),
+			}
+			if v.Error != nil {
+				attrs = append(attrs, slog.String("error", v.Error.Error()))
+			}
+			logger.LogAttrs(c.Request().Context(), level, "request", attrs...)
+			return nil
+		},
+	}))
+	e.Use(echomiddleware.Recover())
+
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
+	e.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
+		Subsystem:  "polina_api",
+		Registerer: registry,
+	}))
+	e.GET("/metrics", echoprometheus.NewHandlerWithConfig(echoprometheus.HandlerConfig{
+		Gatherer: registry,
+	}))
+}
+
 func (s *Server) Start() error {
 	if err := s.echo.Start(":" + s.port); err != nil && err != http.ErrServerClosed {
 		return err
@@ -240,16 +298,21 @@ func (ev *echoValidator) Validate(i any) error {
 	return nil
 }
 
-func errorHandler(err error, c echo.Context) {
-	he, ok := err.(*echo.HTTPError)
-	if !ok {
-		c.Logger().Error(err)
-		he = echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
-	}
-	if !c.Response().Committed {
-		_ = c.JSON(he.Code, map[string]any{
-			"status_code": he.Code,
-			"message":     he.Message,
-		})
+func newErrorHandler(logger *slog.Logger) echo.HTTPErrorHandler {
+	return func(err error, c echo.Context) {
+		he, ok := err.(*echo.HTTPError)
+		if !ok {
+			logger.LogAttrs(c.Request().Context(), slog.LevelError, "unhandled error",
+				slog.String("error", err.Error()),
+				slog.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)),
+			)
+			he = echo.NewHTTPError(http.StatusInternalServerError, "internal server error")
+		}
+		if !c.Response().Committed {
+			_ = c.JSON(he.Code, map[string]any{
+				"status_code": he.Code,
+				"message":     he.Message,
+			})
+		}
 	}
 }
