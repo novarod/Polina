@@ -277,11 +277,27 @@ func useObservability(e *echo.Echo, logger *slog.Logger) {
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
+	panicsRecovered := prometheus.NewCounter(prometheus.CounterOpts{
+		Subsystem: "polina_api",
+		Name:      "panics_recovered_total",
+		Help:      "Total number of panics recovered by the HTTP middleware.",
+	})
+	registry.MustRegister(panicsRecovered)
 	e.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
 		Subsystem:  "polina_api",
 		Registerer: registry,
 	}))
-	e.Use(echomiddleware.Recover())
+	e.Use(echomiddleware.RecoverWithConfig(echomiddleware.RecoverConfig{
+		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
+			panicsRecovered.Inc()
+			logger.LogAttrs(c.Request().Context(), slog.LevelError, "panic recovered",
+				slog.String("request_id", c.Response().Header().Get(echo.HeaderXRequestID)),
+				slog.String("error", err.Error()),
+				slog.String("stack", string(stack)),
+			)
+			return err
+		},
+	}))
 	e.GET("/metrics", echoprometheus.NewHandlerWithConfig(echoprometheus.HandlerConfig{
 		Gatherer: registry,
 	}))

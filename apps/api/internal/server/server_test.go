@@ -73,4 +73,7 @@ func TestObservability_PanicIsCountedAs500(t *testing.T) {
 	if !strings.Contains(metrics.Body.String(), `code="500"`) {
 		t.Fatal("metrics are missing the 500 counter for the recovered panic")
 	}
+	if !strings.Contains(metrics.Body.String(), "polina_api_panics_recovered_total 1") {
+		t.Fatal("metrics are missing the dedicated recovered-panic counter")
+	}
 }
