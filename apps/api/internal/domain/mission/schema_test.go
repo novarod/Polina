@@ -49,7 +49,7 @@ func TestSchema_ValidFixtures(t *testing.T) {
 	sch := compileSchema(t)
 	for _, path := range fixturePaths(t, "valid") {
 		t.Run(filepath.Base(path), func(t *testing.T) {
-			b, err := os.ReadFile(path)
+			b, err := os.ReadFile(filepath.Clean(path))
 			require.NoError(t, err)
 
 			doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))
@@ -69,7 +69,7 @@ func TestSchema_InvalidFixtures(t *testing.T) {
 	sch := compileSchema(t)
 	for _, path := range fixturePaths(t, "invalid") {
 		t.Run(filepath.Base(path), func(t *testing.T) {
-			b, err := os.ReadFile(path)
+			b, err := os.ReadFile(filepath.Clean(path))
 			require.NoError(t, err)
 
 			doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(b))

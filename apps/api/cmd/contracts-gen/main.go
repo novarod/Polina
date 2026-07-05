@@ -23,11 +23,11 @@ func main() {
 		fmt.Fprintln(os.Stderr, "contracts-gen:", err)
 		os.Exit(1)
 	}
-	if err := os.MkdirAll(filepath.Dir(*out), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(*out), 0o750); err != nil {
 		fmt.Fprintln(os.Stderr, "contracts-gen:", err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(*out, data, 0o644); err != nil {
+	if err := os.WriteFile(*out, data, 0o600); err != nil {
 		fmt.Fprintln(os.Stderr, "contracts-gen:", err)
 		os.Exit(1)
 	}
