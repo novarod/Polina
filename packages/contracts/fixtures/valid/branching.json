@@ -1,0 +1,25 @@
+{
+  "mission_id": "7c2d1e5b-3f8a-4b90-a1c2-d4e6f8a0b123",
+  "version": 0,
+  "hash": "6f74dec787c32ab684a51c9310d247db1468c17f48e3a02b888d6e0292c53861",
+  "start_node": "start",
+  "nodes": {
+    "start": { "type": "START", "next": ["briefing"] },
+    "briefing": {
+      "type": "DIALOGUE",
+      "data": { "speaker": "Elder Mira", "text": "Wolves raid the granary at night. Thin the pack or recover what they stole." },
+      "next": ["hunt", "recover"]
+    },
+    "hunt": {
+      "type": "KILL",
+      "data": { "target": "wolf", "count": 5 },
+      "next": ["end"]
+    },
+    "recover": {
+      "type": "COLLECT",
+      "data": { "item": "grain_sack", "count": 3 },
+      "next": ["end"]
+    },
+    "end": { "type": "END", "next": [] }
+  }
+}

@@ -16,7 +16,7 @@ type ContractNode struct {
 type Contract struct {
 	MissionID string                  `json:"mission_id"`
 	Version   int                     `json:"version"`
-	Hash      string                  `json:"hash"`
+	Hash      string                  `json:"hash" jsonschema:"pattern=^[0-9a-f]{64}$"`
 	StartNode string                  `json:"start_node"`
 	Nodes     map[string]ContractNode `json:"nodes"`
 }

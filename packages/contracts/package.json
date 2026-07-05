@@ -1,0 +1,24 @@
+{
+  "name": "@polina/contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/contract.ts",
+    "./schema": "./schema/contract.schema.json"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "generate": "json2ts -i schema/contract.schema.json -o src/contract.ts",
+    "test": "tsc --noEmit && vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "ajv": "^8.17.1",
+    "json-schema-to-typescript": "^15.0.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

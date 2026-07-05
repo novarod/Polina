@@ -183,6 +183,21 @@ GET /health    ->   200 {"status":"ok"}
 GET /metrics   ->   200 exposição Prometheus (rede interna, sem auth na v1)
 ```
 
+## Pacote de contratos
+
+O contrato flat de missão servido ao plugin UE5 é um artefato de primeira classe em
+`packages/contracts/`: JSON Schema gerado dos tipos Go (`contract.go` é a fonte única da verdade —
+o contrato é gerado, nunca escrito duas vezes), fixtures de exemplo com hashes reais de conteúdo e
+tipos TypeScript gerados do schema. Para regenerar:
+
+```bash
+make -C apps/api generate-contracts
+```
+
+Golden tests validam as mesmas fixtures dos dois lados (Go e TypeScript), e o CI falha se o schema
+ou os tipos commitados divergirem de `contract.go`. Consumidores pinam uma git tag
+`contracts/vX.Y.Z` — não há npm publish.
+
 ## Qualidade de código
 
 ```bash

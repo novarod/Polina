@@ -1,0 +1,10 @@
+{
+  "mission_id": "0b8e7f3a-9c41-4d2a-b6f0-2f4a5f1c9e77",
+  "version": 0,
+  "hash": "1da43ea32d0015a2618a05b27b7eb58f8eb6e331d75677fc211279a57c498ee4",
+  "start_node": "start",
+  "nodes": {
+    "start": { "type": "START", "next": ["end"] },
+    "end": { "type": "END", "next": [] }
+  }
+}

@@ -1,4 +1,4 @@
-.PHONY: run build test test-integration lint generate migrate migrate-down migrate-create
+.PHONY: run build test test-integration lint generate generate-contracts migrate migrate-down migrate-create
 
 DB_URL ?= postgres://polina:polina@localhost:5432/polina?sslmode=disable
 
@@ -10,6 +10,10 @@ build:
 
 generate:
 	swag init -g cmd/server/main.go -o docs --parseInternal --parseDependency --parseDepth 2
+
+generate-contracts:
+	go run ./cmd/contracts-gen
+	pnpm --dir ../../packages/contracts generate
 
 test:
 	go test ./... -race -count=1
