@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/novarod/polina/packages/contracts/schema/contract.schema.json",
+  "definitions": {
+    "ContractNode": {
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "data": true,
+        "next": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "type",
+        "next"
+      ]
+    }
+  },
+  "properties": {
+    "mission_id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer"
+    },
+    "hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "start_node": {
+      "type": "string"
+    },
+    "nodes": {
+      "additionalProperties": {
+        "$ref": "#/definitions/ContractNode"
+      },
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "type": "object",
+  "required": [
+    "mission_id",
+    "version",
+    "hash",
+    "start_node",
+    "nodes"
+  ],
+  "title": "Contract"
+}
