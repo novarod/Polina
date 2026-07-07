@@ -44,7 +44,7 @@ describe("LoginForm", () => {
         email: "a@b.com",
         password: "hunter22",
       });
-      expect(push).toHaveBeenCalledWith("/home");
+      expect(push).toHaveBeenCalledWith("/orgs");
     });
   });
 

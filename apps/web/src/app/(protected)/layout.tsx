@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { AppTopbar } from "@/components/nav/app-topbar";
 import { getSessionUser } from "@/services/session";
 
 export default async function ProtectedLayout({
@@ -9,5 +10,10 @@ export default async function ProtectedLayout({
   if (!user) {
     redirect("/login");
   }
-  return children;
+  return (
+    <div className="flex min-h-dvh flex-col">
+      <AppTopbar userName={user.name} />
+      {children}
+    </div>
+  );
 }

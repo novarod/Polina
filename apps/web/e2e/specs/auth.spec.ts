@@ -1,18 +1,72 @@
-import { expect, test } from "../fixtures/session";
-import { HomePage } from "../pages/home-page";
-import { LoginPage } from "../pages/login-page";
+import type { Page } from "@playwright/test";
 
-test("login com credenciais válidas leva à home com o nome do usuário", async ({
+import { expect, test, type Account } from "../fixtures/session";
+import { LoginPage } from "../pages/login-page";
+import { OrgsPage } from "../pages/orgs-page";
+
+const RATE_LIMIT_WAIT_MS = 13_000;
+
+async function loginUntilBudget(
+  page: Page,
+  loginPage: LoginPage,
+  account: Account,
+  password: string,
+  expectedError?: string
+): Promise<void> {
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    await loginPage.login(account.email, password);
+    if (!expectedError) {
+      try {
+        await expect(page).toHaveURL("/orgs", { timeout: 4000 });
+        return;
+      } catch {
+        const message = await loginPage.errorAlert
+          .textContent()
+          .catch(() => null);
+        if (!message?.includes("rate limit")) {
+          throw new Error(`Login de UI falhou: ${message}`);
+        }
+      }
+    } else {
+      const message = await loginPage.errorAlert.textContent();
+      if (message === expectedError) {
+        return;
+      }
+      if (!message?.includes("rate limit")) {
+        throw new Error(`Erro inesperado no login de UI: ${message}`);
+      }
+    }
+    await page.waitForTimeout(RATE_LIMIT_WAIT_MS);
+  }
+  throw new Error("Login de UI esbarrando no rate limit persistentemente");
+}
+
+async function injectSession(
+  page: Page,
+  sessionToken: string
+): Promise<void> {
+  await page.context().addCookies([
+    {
+      name: "session",
+      value: sessionToken,
+      url: "http://localhost:3000",
+      httpOnly: true,
+      sameSite: "Strict",
+    },
+  ]);
+}
+
+test("login com credenciais válidas leva às organizações com o nome do usuário", async ({
   page,
   account,
 }) => {
   const loginPage = new LoginPage(page);
   await loginPage.goto();
-  await loginPage.login(account.email, account.password);
+  await loginUntilBudget(page, loginPage, account, account.password);
 
-  const homePage = new HomePage(page);
-  await expect(page).toHaveURL("/home");
-  await expect(homePage.greeting).toContainText(account.name);
+  const orgsPage = new OrgsPage(page);
+  await expect(page).toHaveURL("/orgs");
+  await expect(orgsPage.userMenu).toContainText(account.name);
 });
 
 test("credenciais inválidas mostram erro e permanecem em /login", async ({
@@ -21,45 +75,52 @@ test("credenciais inválidas mostram erro e permanecem em /login", async ({
 }) => {
   const loginPage = new LoginPage(page);
   await loginPage.goto();
-  await loginPage.login(account.email, "senha-errada-123");
-
-  await expect(loginPage.errorAlert).toHaveText("Email ou senha inválidos");
-  await expect(page).toHaveURL("/login");
-});
-
-test("acessar /home sem sessão redireciona para /login", async ({ page }) => {
-  const homePage = new HomePage(page);
-  await homePage.goto();
+  await loginUntilBudget(
+    page,
+    loginPage,
+    account,
+    "senha-errada-123",
+    "Email ou senha inválidos"
+  );
 
   await expect(page).toHaveURL("/login");
 });
 
-test("reload em /home mantém a sessão", async ({ page, account }) => {
-  const loginPage = new LoginPage(page);
-  await loginPage.goto();
-  await loginPage.login(account.email, account.password);
-  await expect(page).toHaveURL("/home");
+test("acessar /orgs sem sessão redireciona para /login", async ({ page }) => {
+  const orgsPage = new OrgsPage(page);
+  await orgsPage.goto();
+
+  await expect(page).toHaveURL("/login");
+});
+
+test("reload em /orgs mantém a sessão", async ({
+  page,
+  account,
+  sessionToken,
+}) => {
+  await injectSession(page, sessionToken);
+  await page.goto("/orgs");
+  await expect(page).toHaveURL("/orgs");
 
   await page.reload();
 
-  const homePage = new HomePage(page);
-  await expect(page).toHaveURL("/home");
-  await expect(homePage.greeting).toContainText(account.name);
+  const orgsPage = new OrgsPage(page);
+  await expect(page).toHaveURL("/orgs");
+  await expect(orgsPage.userMenu).toContainText(account.name);
 });
 
-test("logout encerra a sessão e /home volta a redirecionar", async ({
+test("logout encerra a sessão e /orgs volta a redirecionar", async ({
   page,
-  account,
+  sessionToken,
 }) => {
-  const loginPage = new LoginPage(page);
-  await loginPage.goto();
-  await loginPage.login(account.email, account.password);
-  await expect(page).toHaveURL("/home");
+  await injectSession(page, sessionToken);
+  const orgsPage = new OrgsPage(page);
+  await orgsPage.goto();
+  await expect(page).toHaveURL("/orgs");
 
-  const homePage = new HomePage(page);
-  await homePage.logout();
+  await orgsPage.logout();
   await expect(page).toHaveURL("/login");
 
-  await homePage.goto();
+  await orgsPage.goto();
   await expect(page).toHaveURL("/login");
 });

@@ -204,7 +204,10 @@ ou os tipos commitados divergirem de `contract.go`. Consumidores pinam uma git t
 design tokens com tema 16-bit). A autenticação usa o cookie de sessão HttpOnly da API — sem
 tokens no cliente: um rewrite do Next faz proxy de `/api/*` para a API (env `API_URL`,
 default `http://localhost:8080`), mantendo o cookie first-party, e as rotas protegidas têm
-guard server-side contra `GET /auth/me`.
+guard server-side contra `GET /auth/me`. A navegação é URL-as-state:
+`/orgs → /orgs/[orgId] → …/workspaces/[workspaceId] → …/missions/[missionId]`, com CRUD
+gated por papel (VIEWER/DESIGNER/ADMIN) em todos os níveis e o canvas da missão chegando em
+módulo posterior.
 
 ```bash
 docker compose up -d          # Postgres + API

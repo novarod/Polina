@@ -1,0 +1,44 @@
+import { apiFetch } from "@/services/api";
+import type { Mission } from "@/types/mission";
+
+export interface MissionInput {
+  name: string;
+  description: string;
+}
+
+function missionsPath(orgId: string, workspaceId: string): string {
+  return `/organizations/${orgId}/workspaces/${workspaceId}/missions`;
+}
+
+export function createMission(
+  orgId: string,
+  workspaceId: string,
+  input: MissionInput
+): Promise<Mission> {
+  return apiFetch<Mission>(missionsPath(orgId, workspaceId), {
+    method: "POST",
+    body: input,
+  });
+}
+
+export function updateMission(
+  orgId: string,
+  workspaceId: string,
+  missionId: string,
+  input: MissionInput
+): Promise<Mission> {
+  return apiFetch<Mission>(`${missionsPath(orgId, workspaceId)}/${missionId}`, {
+    method: "PATCH",
+    body: input,
+  });
+}
+
+export function deleteMission(
+  orgId: string,
+  workspaceId: string,
+  missionId: string
+): Promise<void> {
+  return apiFetch<void>(`${missionsPath(orgId, workspaceId)}/${missionId}`, {
+    method: "DELETE",
+  });
+}

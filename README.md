@@ -202,7 +202,10 @@ there is no npm publish.
 16-bit themed design tokens). It authenticates with the API's HttpOnly session cookie — no
 client-side token handling: a Next rewrite proxies `/api/*` to the API (`API_URL` env,
 default `http://localhost:8080`) so the cookie stays first-party, and protected routes are
-guarded server-side against `GET /auth/me`.
+guarded server-side against `GET /auth/me`. Navigation is URL-as-state:
+`/orgs → /orgs/[orgId] → …/workspaces/[workspaceId] → …/missions/[missionId]`, with
+role-gated CRUD (VIEWER/DESIGNER/ADMIN) at every level and the mission canvas arriving in a
+later module.
 
 ```bash
 docker compose up -d          # Postgres + API
