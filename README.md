@@ -196,6 +196,23 @@ Golden tests validate the same fixtures on both sides (Go and TypeScript), and C
 committed schema or types drift from `contract.go`. Consumers pin a `contracts/vX.Y.Z` git tag —
 there is no npm publish.
 
+## Web app
+
+`apps/web` is the Next.js 16 front end (App Router, TypeScript strict, Tailwind 4 + shadcn/ui,
+16-bit themed design tokens). It authenticates with the API's HttpOnly session cookie — no
+client-side token handling: a Next rewrite proxies `/api/*` to the API (`API_URL` env,
+default `http://localhost:8080`) so the cookie stays first-party, and protected routes are
+guarded server-side against `GET /auth/me`.
+
+```bash
+docker compose up -d          # Postgres + API
+pnpm install
+pnpm --dir apps/web dev       # http://localhost:3000
+```
+
+Tests: `pnpm --dir apps/web test` (Vitest + Testing Library) and
+`pnpm --dir apps/web e2e` (Playwright, requires the API running).
+
 ## Code quality
 
 ```bash
