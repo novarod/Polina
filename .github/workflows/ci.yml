@@ -19,10 +19,51 @@ defaults:
     working-directory: apps/api
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.ref_type != 'tag'
+
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      web: ${{ steps.filter.outputs.web }}
+      contracts: ${{ steps.filter.outputs.contracts }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - '.github/workflows/ci.yml'
+            web:
+              - 'apps/web/**'
+              - 'packages/contracts/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yml'
+            contracts:
+              - 'apps/api/internal/domain/mission/contract.go'
+              - 'apps/api/cmd/contracts-gen/**'
+              - 'packages/contracts/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yml'
+
   quality:
     name: Format, Vet, Lint & Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: changes
+    if: ${{ !cancelled() && (github.ref_type == 'tag' || needs.changes.outputs.api == 'true') }}
 
     steps:
       - name: Checkout
@@ -52,6 +93,8 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: changes
+    if: ${{ !cancelled() && (github.ref_type == 'tag' || needs.changes.outputs.api == 'true') }}
 
     services:
       postgres:
@@ -93,6 +136,8 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: changes
+    if: ${{ !cancelled() && (github.ref_type == 'tag' || needs.changes.outputs.api == 'true') }}
 
     steps:
       - name: Checkout
@@ -115,6 +160,8 @@ jobs:
     name: Migration Up/Down Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: changes
+    if: ${{ !cancelled() && (github.ref_type == 'tag' || needs.changes.outputs.api == 'true') }}
 
     services:
       postgres:
@@ -157,6 +204,8 @@ jobs:
     name: Swagger Docs Drift
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: changes
+    if: ${{ !cancelled() && (github.ref_type == 'tag' || needs.changes.outputs.api == 'true') }}
 
     steps:
       - name: Checkout
@@ -184,6 +233,8 @@ jobs:
     name: Contracts Drift & Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: changes
+    if: ${{ !cancelled() && (github.ref_type == 'tag' || needs.changes.outputs.contracts == 'true') }}
 
     defaults:
       run:
@@ -219,3 +270,89 @@ jobs:
 
       - name: Contract golden tests (TypeScript)
         run: pnpm --dir packages/contracts test
+
+  web:
+    name: Web Lint, Tests & E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.web == 'true' }}
+
+    defaults:
+      run:
+        working-directory: .
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: polina
+          POSTGRES_PASSWORD: polina
+          POSTGRES_DB: polina
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U polina"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://polina:polina@localhost:5432/polina?sslmode=disable
+      JWT_SECRET: web-e2e-jwt-secret-not-for-production-0123456789
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --dir apps/web lint
+
+      - name: Typecheck
+        run: pnpm --dir apps/web typecheck
+
+      - name: Unit tests
+        run: pnpm --dir apps/web test
+
+      - name: Build
+        run: pnpm --dir apps/web build
+
+      - name: Install golang-migrate
+        run: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+
+      - name: Migrate up
+        run: migrate -path apps/api/db/migrations -database "$DATABASE_URL" up
+
+      - name: Start API
+        run: |
+          go build -C apps/api -o /tmp/polina-api ./cmd/server
+          nohup /tmp/polina-api > /tmp/polina-api.log 2>&1 &
+          timeout 30 sh -c 'until curl -sf http://localhost:8080/health; do sleep 1; done'
+
+      - name: Install Playwright browsers
+        run: pnpm --dir apps/web exec playwright install --with-deps chromium
+
+      - name: E2E (Playwright)
+        run: pnpm --dir apps/web e2e
+
+      - name: API logs (on failure)
+        if: failure()
+        run: cat /tmp/polina-api.log

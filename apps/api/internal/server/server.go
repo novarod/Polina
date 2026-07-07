@@ -87,6 +87,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	registerUC := appauth.NewRegisterUseCase(userRepo, cfg.BcryptRounds)
 	loginUC := appauth.NewLoginUseCase(userRepo, memberRepo, cfg.JWTSecret, cfg.JWTExpiryHours, cfg.BcryptRounds)
 	logoutAllUC := appauth.NewLogoutAllUseCase(userRepo)
+	meUC := appauth.NewMeUseCase(userRepo)
 
 	createOrgUC := apporg.NewCreateUseCase(store)
 	listOrgUC := apporg.NewListUseCase(orgRepo)
@@ -122,7 +123,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	engineContractUC := appengine.NewGetActiveContractUseCase(missionVersionRepo)
 
 	// Handlers
-	authHandler := handler.NewAuthHandler(registerUC, loginUC, logoutAllUC, handler.CookieConfig{
+	authHandler := handler.NewAuthHandler(registerUC, loginUC, logoutAllUC, meUC, handler.CookieConfig{
 		Secure:      cfg.Production,
 		ExpiryHours: cfg.JWTExpiryHours,
 	})
@@ -162,6 +163,7 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	auth.POST("/login", authHandler.Login, loginThrottleMW)
 	auth.POST("/logout", authHandler.Logout)
 	auth.POST("/logout-all", authHandler.LogoutAll, authMW)
+	auth.GET("/me", authHandler.Me, authMW)
 
 	// Organization routes (authenticated)
 	orgs := e.Group("/organizations")

@@ -261,3 +261,25 @@ func TestLogin_NotAMemberOfOrg(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, http.StatusForbidden, appErrCode(t, err))
 }
+
+func TestMe_ReturnsUser(t *testing.T) {
+	users := newFakeUserRepo()
+	u := storedUser(t, "a@b.com", "correct-horse")
+	users.users["a@b.com"] = u
+	uc := appauth.NewMeUseCase(users)
+
+	out, err := uc.Execute(context.Background(), u.ID)
+
+	require.NoError(t, err)
+	assert.Equal(t, u.ID, out.UserID)
+	assert.Equal(t, u.Name, out.Name)
+}
+
+func TestMe_UnknownUser(t *testing.T) {
+	uc := appauth.NewMeUseCase(newFakeUserRepo())
+
+	_, err := uc.Execute(context.Background(), uuid.New())
+
+	require.Error(t, err)
+	assert.Equal(t, http.StatusNotFound, appErrCode(t, err))
+}

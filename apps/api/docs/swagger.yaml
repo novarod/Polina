@@ -12,6 +12,14 @@ definitions:
     - email
     - password
     type: object
+  github_com_novarod_polina_apps_api_internal_application_auth.MeOutput:
+    properties:
+      name:
+        type: string
+      user_id:
+        format: uuid
+        type: string
+    type: object
   github_com_novarod_polina_apps_api_internal_application_auth.RegisterInput:
     properties:
       email:
@@ -294,6 +302,26 @@ paths:
       security:
       - BearerAuth: []
       summary: Log out everywhere (revoke all sessions)
+      tags:
+      - auth
+  /auth/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_novarod_polina_apps_api_internal_application_auth.MeOutput'
+        "401":
+          description: missing or invalid session
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Current session user
       tags:
       - auth
   /auth/register:

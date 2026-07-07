@@ -19,11 +19,12 @@ type AuthHandler struct {
 	register  *appauth.RegisterUseCase
 	login     *appauth.LoginUseCase
 	logoutAll *appauth.LogoutAllUseCase
+	me        *appauth.MeUseCase
 	cookie    CookieConfig
 }
 
-func NewAuthHandler(register *appauth.RegisterUseCase, login *appauth.LoginUseCase, logoutAll *appauth.LogoutAllUseCase, cookie CookieConfig) *AuthHandler {
-	return &AuthHandler{register: register, login: login, logoutAll: logoutAll, cookie: cookie}
+func NewAuthHandler(register *appauth.RegisterUseCase, login *appauth.LoginUseCase, logoutAll *appauth.LogoutAllUseCase, me *appauth.MeUseCase, cookie CookieConfig) *AuthHandler {
+	return &AuthHandler{register: register, login: login, logoutAll: logoutAll, me: me, cookie: cookie}
 }
 
 type loginResponse struct {
@@ -81,6 +82,22 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	})
 
 	return c.JSON(http.StatusOK, loginResponse{UserID: out.UserID, Name: out.Name})
+}
+
+// @Summary  Current session user
+// @Tags     auth
+// @Produce  json
+// @Security BearerAuth
+// @Success  200  {object}  appauth.MeOutput
+// @Failure  401  {object}  map[string]string  "missing or invalid session"
+// @Router   /auth/me [get]
+func (h *AuthHandler) Me(c echo.Context) error {
+	claims := httpmw.MustGetClaims(c)
+	out, err := h.me.Execute(c.Request().Context(), claims.UserID)
+	if err != nil {
+		return mapError(err)
+	}
+	return c.JSON(http.StatusOK, out)
 }
 
 // @Summary  Log out
