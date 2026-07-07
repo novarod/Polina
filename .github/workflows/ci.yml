@@ -300,6 +300,7 @@ jobs:
     env:
       DATABASE_URL: postgres://polina:polina@localhost:5432/polina?sslmode=disable
       JWT_SECRET: web-e2e-jwt-secret-not-for-production-0123456789
+      THROTTLE_LIMIT: "120"
 
     steps:
       - name: Checkout

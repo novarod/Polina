@@ -31,7 +31,7 @@ export function LoginForm() {
     setSubmitError(null);
     try {
       await login(values);
-      router.push("/home");
+      router.push("/orgs");
       router.refresh();
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {

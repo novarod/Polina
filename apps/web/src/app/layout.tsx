@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Press_Start_2P } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 
 const geistSans = Geist({
@@ -33,7 +34,10 @@ export default function RootLayout({
         pressStart2P.variable
       )}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        <Toaster richColors />
+      </body>
     </html>
   );
 }
