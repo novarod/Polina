@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -11,24 +11,38 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
+import {
+  MissionEditor,
+  type MissionEditorProps,
+} from "@/components/canvas/mission-editor";
 import { NodePanel, type SelectedNode } from "@/components/canvas/node-panel";
 import { QuestNode } from "@/components/canvas/quest-node";
+import { useMounted } from "@/hooks/use-mounted";
 import { layoutGraph, type QuestFlowNode } from "@/lib/graph-layout";
 import type { EditorGraph } from "@/types/graph";
 
 const nodeTypes = { quest: QuestNode };
 
-const emptySubscribe = () => () => {};
+type MissionCanvasProps =
+  | { editable?: false; graph: EditorGraph }
+  | ({ editable: true } & MissionEditorProps);
 
-function useMounted(): boolean {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
+export function MissionCanvas(props: MissionCanvasProps) {
+  if (props.editable) {
+    const { graph, orgId, workspaceId, missionId } = props;
+    return (
+      <MissionEditor
+        graph={graph}
+        orgId={orgId}
+        workspaceId={workspaceId}
+        missionId={missionId}
+      />
+    );
+  }
+  return <ReadOnlyCanvas graph={props.graph} />;
 }
 
-export function MissionCanvas({ graph }: { graph: EditorGraph }) {
+function ReadOnlyCanvas({ graph }: { graph: EditorGraph }) {
   const { nodes, edges } = useMemo(() => layoutGraph(graph), [graph]);
   const [selected, setSelected] = useState<SelectedNode | null>(null);
   const mounted = useMounted();
@@ -52,7 +66,7 @@ export function MissionCanvas({ graph }: { graph: EditorGraph }) {
         className="flex h-[60vh] items-center justify-center rounded-sm border-2 border-dashed border-foreground/40 bg-card/50"
       >
         <p className="text-muted-foreground">
-          Grafo vazio — a edição de missões chega no próximo módulo.
+          Grafo vazio — peça a um designer da organização para montar a missão.
         </p>
       </div>
     );

@@ -7,15 +7,26 @@ import type { QuestFlowNode } from "@/lib/graph-layout";
 import { cn } from "@/lib/utils";
 
 export function QuestNode({ id, data, selected }: NodeProps<QuestFlowNode>) {
+  const errors = data.errors ?? [];
   return (
     <div
       data-testid="quest-node"
       data-node-type={data.nodeType}
       className={cn(
-        "flex h-full w-full items-center rounded-sm border-2 border-foreground/70 bg-card px-3 py-2 text-card-foreground shadow-[4px_4px_0_0] shadow-foreground/25",
-        selected && "border-primary shadow-primary/40"
+        "relative flex h-full w-full items-center rounded-sm border-2 border-foreground/70 bg-card px-3 py-2 text-card-foreground shadow-[4px_4px_0_0] shadow-foreground/25",
+        selected && "border-primary shadow-primary/40",
+        errors.length > 0 && "border-destructive shadow-destructive/40"
       )}
     >
+      {errors.length > 0 && (
+        <span
+          data-testid="node-error-badge"
+          title={errors.join("\n")}
+          className="absolute -top-2.5 -right-2.5 flex size-5 items-center justify-center rounded-sm border-2 border-destructive bg-card font-display text-[10px] text-destructive"
+        >
+          !
+        </span>
+      )}
       <div className="flex min-w-0 items-center gap-2 text-primary">
         <NodeSprite type={data.nodeType} />
         <div className="min-w-0">

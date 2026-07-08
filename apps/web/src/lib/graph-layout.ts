@@ -9,6 +9,7 @@ const NODE_HEIGHT = 76;
 export interface QuestNodeData extends Record<string, unknown> {
   nodeType: string;
   payload: unknown;
+  errors?: string[];
 }
 
 export type QuestFlowNode = Node<QuestNodeData, "quest">;

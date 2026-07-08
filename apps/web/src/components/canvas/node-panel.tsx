@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { XIcon } from "lucide-react";
 
 import { NodeSprite } from "@/components/canvas/node-sprite";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 export interface SelectedNode {
   id: string;
@@ -14,9 +16,81 @@ export interface SelectedNode {
 interface NodePanelProps {
   node: SelectedNode | null;
   onClose: () => void;
+  onApplyData?: (payload: unknown) => void;
+  onDelete?: () => void;
 }
 
-export function NodePanel({ node, onClose }: NodePanelProps) {
+function toDraft(payload: unknown): string {
+  return payload == null ? "" : JSON.stringify(payload, null, 2);
+}
+
+function DataEditor({
+  node,
+  onApplyData,
+}: {
+  node: SelectedNode;
+  onApplyData: (payload: unknown) => void;
+}) {
+  const [draft, setDraft] = useState(() => toDraft(node.payload));
+  const [syntaxError, setSyntaxError] = useState<string | null>(null);
+
+  function apply() {
+    const trimmed = draft.trim();
+    if (trimmed === "") {
+      setSyntaxError(null);
+      onApplyData(null);
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(trimmed);
+      setSyntaxError(null);
+      onApplyData(parsed);
+    } catch {
+      setSyntaxError("JSON inválido — nada foi aplicado");
+    }
+  }
+
+  function cancel() {
+    setDraft(toDraft(node.payload));
+    setSyntaxError(null);
+  }
+
+  return (
+    <div className="mt-1 grid gap-2">
+      <Textarea
+        data-testid="node-data-editor"
+        aria-label="Dados do nó (JSON)"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        className="max-h-64 min-h-24 font-mono text-xs"
+      />
+      {syntaxError && (
+        <p
+          role="alert"
+          data-testid="node-data-error"
+          className="text-sm font-medium text-destructive"
+        >
+          {syntaxError}
+        </p>
+      )}
+      <div className="flex gap-2">
+        <Button size="xs" onClick={apply}>
+          Aplicar
+        </Button>
+        <Button size="xs" variant="ghost" onClick={cancel}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function NodePanel({
+  node,
+  onClose,
+  onApplyData,
+  onDelete,
+}: NodePanelProps) {
   if (!node) {
     return null;
   }
@@ -47,7 +121,9 @@ export function NodePanel({ node, onClose }: NodePanelProps) {
       <p className="mt-4 font-display text-[9px] text-muted-foreground">
         Dados
       </p>
-      {node.payload == null ? (
+      {onApplyData ? (
+        <DataEditor key={node.id} node={node} onApplyData={onApplyData} />
+      ) : node.payload == null ? (
         <p className="mt-1 text-sm text-muted-foreground">Sem dados</p>
       ) : (
         <pre
@@ -56,6 +132,17 @@ export function NodePanel({ node, onClose }: NodePanelProps) {
         >
           {JSON.stringify(node.payload, null, 2)}
         </pre>
+      )}
+      {onDelete && (
+        <Button
+          variant="destructive"
+          size="xs"
+          className="mt-4"
+          data-testid="delete-node"
+          onClick={onDelete}
+        >
+          Deletar nó
+        </Button>
       )}
     </aside>
   );

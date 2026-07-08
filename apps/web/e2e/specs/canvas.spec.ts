@@ -40,7 +40,7 @@ test("mission com grafo mostra os nós custom, minimap e painel com data", async
 
   await page.goto(seeded.path);
 
-  await expect(canvas.canvas).toBeVisible();
+  await expect(canvas.editor).toBeVisible();
   await expect(canvas.questNodes).toHaveCount(5);
   for (const type of ["START", "DIALOGUE", "KILL", "COLLECT", "END"]) {
     await expect(canvas.nodeByType(type)).toHaveCount(1);
@@ -49,10 +49,10 @@ test("mission com grafo mostra os nós custom, minimap e painel com data", async
 
   await canvas.openNode("DIALOGUE");
   await expect(canvas.panel).toBeVisible();
-  await expect(canvas.panelData).toContainText("Aldeão");
+  await expect(canvas.dataEditor).toHaveValue(/Aldeão/);
 });
 
-test("mission com grafo vazio mostra o empty state do canvas", async ({
+test("mission com grafo vazio abre o editor com a paleta", async ({
   page,
   sessionToken,
 }) => {
@@ -61,6 +61,8 @@ test("mission com grafo vazio mostra o empty state do canvas", async ({
 
   await page.goto(seeded.path);
 
-  await expect(canvas.emptyState).toBeVisible();
-  await expect(canvas.canvas).toHaveCount(0);
+  await expect(canvas.editor).toBeVisible();
+  await expect(page.getByTestId("node-palette")).toBeVisible();
+  await expect(canvas.questNodes).toHaveCount(0);
+  await expect(canvas.emptyState).toHaveCount(0);
 });

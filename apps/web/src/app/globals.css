@@ -104,3 +104,9 @@
   --xy-minimap-node-background-color: var(--primary);
   background-color: var(--background);
 }
+
+[data-testid="mission-editor"] .react-flow__handle {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}

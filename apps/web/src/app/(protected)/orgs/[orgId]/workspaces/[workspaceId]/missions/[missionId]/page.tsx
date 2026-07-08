@@ -5,6 +5,7 @@ import { MissionCanvas } from "@/components/canvas/mission-canvas";
 import { MissionStatusBadge } from "@/components/missions/mission-status-badge";
 import { BreadcrumbNav } from "@/components/nav/breadcrumb-nav";
 import { toEditorGraph } from "@/lib/graph-layout";
+import { roleAtLeast } from "@/lib/roles";
 import { getOrgRole } from "@/services/organizations-server";
 import { serverFetch } from "@/services/server-api";
 import type { Mission } from "@/types/mission";
@@ -59,7 +60,17 @@ export default async function MissionPage({
           </p>
         )}
       </div>
-      <MissionCanvas graph={toEditorGraph(mission.graph)} />
+      {roleAtLeast(role, "DESIGNER") ? (
+        <MissionCanvas
+          editable
+          graph={toEditorGraph(mission.graph)}
+          orgId={orgId}
+          workspaceId={workspaceId}
+          missionId={missionId}
+        />
+      ) : (
+        <MissionCanvas graph={toEditorGraph(mission.graph)} />
+      )}
     </main>
   );
 }
