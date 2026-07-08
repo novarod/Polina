@@ -204,8 +204,10 @@ client-side token handling: a Next rewrite proxies `/api/*` to the API (`API_URL
 default `http://localhost:8080`) so the cookie stays first-party, and protected routes are
 guarded server-side against `GET /auth/me`. Navigation is URL-as-state:
 `/orgs → /orgs/[orgId] → …/workspaces/[workspaceId] → …/missions/[missionId]`, with
-role-gated CRUD (VIEWER/DESIGNER/ADMIN) at every level and the mission canvas arriving in a
-later module.
+role-gated CRUD (VIEWER/DESIGNER/ADMIN) at every level. The mission page renders the quest
+graph in a read-only React Flow canvas — pixel-art node sprites per type, auto-layout (dagre)
+when nodes carry no saved position, themed minimap and a node inspector panel. Editing arrives
+in a later module.
 
 ```bash
 docker compose up -d          # Postgres + API
