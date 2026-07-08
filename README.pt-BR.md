@@ -206,8 +206,10 @@ tokens no cliente: um rewrite do Next faz proxy de `/api/*` para a API (env `API
 default `http://localhost:8080`), mantendo o cookie first-party, e as rotas protegidas têm
 guard server-side contra `GET /auth/me`. A navegação é URL-as-state:
 `/orgs → /orgs/[orgId] → …/workspaces/[workspaceId] → …/missions/[missionId]`, com CRUD
-gated por papel (VIEWER/DESIGNER/ADMIN) em todos os níveis e o canvas da missão chegando em
-módulo posterior.
+gated por papel (VIEWER/DESIGNER/ADMIN) em todos os níveis. A página da missão renderiza o
+grafo de quest num canvas React Flow read-only — sprites pixel-art por tipo de nó,
+auto-layout (dagre) quando os nós não têm posição salva, minimap tematizado e painel
+inspetor de nó. A edição chega em módulo posterior.
 
 ```bash
 docker compose up -d          # Postgres + API

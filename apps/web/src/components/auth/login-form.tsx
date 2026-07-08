@@ -13,7 +13,7 @@ import { ApiError } from "@/services/api";
 import { login } from "@/services/auth";
 
 const loginSchema = z.object({
-  email: z.string().email("Informe um email válido"),
+  email: z.email("Informe um email válido"),
   password: z.string().min(1, "Informe a senha"),
 });
 

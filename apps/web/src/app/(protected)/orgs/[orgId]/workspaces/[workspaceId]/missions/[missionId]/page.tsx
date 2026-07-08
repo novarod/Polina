@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { MissionCanvas } from "@/components/canvas/mission-canvas";
 import { MissionStatusBadge } from "@/components/missions/mission-status-badge";
 import { BreadcrumbNav } from "@/components/nav/breadcrumb-nav";
-import { Card, CardContent } from "@/components/ui/card";
+import { toEditorGraph } from "@/lib/graph-layout";
 import { getOrgRole } from "@/services/organizations-server";
 import { serverFetch } from "@/services/server-api";
 import type { Mission } from "@/types/mission";
@@ -58,13 +59,7 @@ export default async function MissionPage({
           </p>
         )}
       </div>
-      <Card className="border-dashed">
-        <CardContent className="flex min-h-64 items-center justify-center">
-          <p className="text-muted-foreground" data-testid="canvas-placeholder">
-            O canvas do editor chega no módulo 4.
-          </p>
-        </CardContent>
-      </Card>
+      <MissionCanvas graph={toEditorGraph(mission.graph)} />
     </main>
   );
 }
