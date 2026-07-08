@@ -1,4 +1,5 @@
 import { apiFetch } from "@/services/api";
+import type { EditorGraph } from "@/types/graph";
 import type { Mission } from "@/types/mission";
 
 export interface MissionInput {
@@ -31,6 +32,18 @@ export function updateMission(
     method: "PATCH",
     body: input,
   });
+}
+
+export function updateMissionGraph(
+  orgId: string,
+  workspaceId: string,
+  missionId: string,
+  graph: EditorGraph
+): Promise<Mission> {
+  return apiFetch<Mission>(
+    `${missionsPath(orgId, workspaceId)}/${missionId}/graph`,
+    { method: "PUT", body: graph }
+  );
 }
 
 export function deleteMission(

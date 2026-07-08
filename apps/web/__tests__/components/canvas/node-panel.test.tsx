@@ -55,3 +55,82 @@ describe("NodePanel", () => {
     expect(onClose).toHaveBeenCalled();
   });
 });
+
+describe("NodePanel editable", () => {
+  it("applies valid JSON through onApplyData", async () => {
+    const onApplyData = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <NodePanel
+        node={{ id: "talk", type: "DIALOGUE", payload: null }}
+        onClose={() => {}}
+        onApplyData={onApplyData}
+        onDelete={() => {}}
+      />
+    );
+
+    await user.type(
+      screen.getByTestId("node-data-editor"),
+      '{{"npc": "Aldeão"}'
+    );
+    await user.click(screen.getByRole("button", { name: "Aplicar" }));
+
+    expect(onApplyData).toHaveBeenCalledWith({ npc: "Aldeão" });
+  });
+
+  it("rejects invalid JSON with an inline error and applies nothing", async () => {
+    const onApplyData = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <NodePanel
+        node={{ id: "talk", type: "DIALOGUE", payload: null }}
+        onClose={() => {}}
+        onApplyData={onApplyData}
+        onDelete={() => {}}
+      />
+    );
+
+    await user.type(screen.getByTestId("node-data-editor"), "{{npc:");
+    await user.click(screen.getByRole("button", { name: "Aplicar" }));
+
+    expect(screen.getByTestId("node-data-error")).toHaveTextContent(
+      "JSON inválido — nada foi aplicado"
+    );
+    expect(onApplyData).not.toHaveBeenCalled();
+  });
+
+  it("applies null when the textarea is cleared", async () => {
+    const onApplyData = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <NodePanel
+        node={{ id: "talk", type: "DIALOGUE", payload: { npc: "Aldeão" } }}
+        onClose={() => {}}
+        onApplyData={onApplyData}
+        onDelete={() => {}}
+      />
+    );
+
+    await user.clear(screen.getByTestId("node-data-editor"));
+    await user.click(screen.getByRole("button", { name: "Aplicar" }));
+
+    expect(onApplyData).toHaveBeenCalledWith(null);
+  });
+
+  it("calls onDelete from the delete button", async () => {
+    const onDelete = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <NodePanel
+        node={{ id: "talk", type: "DIALOGUE", payload: null }}
+        onClose={() => {}}
+        onApplyData={() => {}}
+        onDelete={onDelete}
+      />
+    );
+
+    await user.click(screen.getByTestId("delete-node"));
+
+    expect(onDelete).toHaveBeenCalled();
+  });
+});

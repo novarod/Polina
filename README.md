@@ -205,9 +205,11 @@ default `http://localhost:8080`) so the cookie stays first-party, and protected 
 guarded server-side against `GET /auth/me`. Navigation is URL-as-state:
 `/orgs → /orgs/[orgId] → …/workspaces/[workspaceId] → …/missions/[missionId]`, with
 role-gated CRUD (VIEWER/DESIGNER/ADMIN) at every level. The mission page renders the quest
-graph in a read-only React Flow canvas — pixel-art node sprites per type, auto-layout (dagre)
-when nodes carry no saved position, themed minimap and a node inspector panel. Editing arrives
-in a later module.
+graph in a React Flow canvas — pixel-art node sprites per type, auto-layout (dagre) when nodes
+carry no saved position, themed minimap and a node inspector panel. DESIGNER+ gets the full
+editor: node palette, drag/connect/delete, JSON data editing, explicit save to `PUT /graph`,
+and the backend's DAG rules mirrored client-side so validation errors are drawn live on the
+offending nodes.
 
 ```bash
 docker compose up -d          # Postgres + API

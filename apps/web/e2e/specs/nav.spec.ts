@@ -48,12 +48,12 @@ test("fluxo completo: criar, navegar, renomear e deletar org → workspace → m
   await expect(workspacePage.missionCard("Resgate")).toBeVisible();
 
   await workspacePage.openMission("Resgate");
-  await expect(missionPage.emptyCanvas).toBeVisible();
+  await expect(missionPage.editorCanvas).toBeVisible();
   await expect(missionPage.statusBadge).toHaveText("Rascunho");
   const missionUrl = page.url();
 
   await page.goto(missionUrl);
-  await expect(missionPage.emptyCanvas).toBeVisible();
+  await expect(missionPage.editorCanvas).toBeVisible();
 
   await missionPage.breadcrumb
     .getByRole("link", { name: "DLC de Natal" })
