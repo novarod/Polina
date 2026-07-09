@@ -1,6 +1,10 @@
 import { apiFetch } from "@/services/api";
 import type { EditorGraph } from "@/types/graph";
-import type { Mission } from "@/types/mission";
+import type {
+  Mission,
+  MissionVersionDetail,
+  PublishResponse,
+} from "@/types/mission";
 
 export interface MissionInput {
   name: string;
@@ -43,6 +47,28 @@ export function updateMissionGraph(
   return apiFetch<Mission>(
     `${missionsPath(orgId, workspaceId)}/${missionId}/graph`,
     { method: "PUT", body: graph }
+  );
+}
+
+export function publishMission(
+  orgId: string,
+  workspaceId: string,
+  missionId: string
+): Promise<PublishResponse> {
+  return apiFetch<PublishResponse>(
+    `${missionsPath(orgId, workspaceId)}/${missionId}/publish`,
+    { method: "POST" }
+  );
+}
+
+export function getMissionVersion(
+  orgId: string,
+  workspaceId: string,
+  missionId: string,
+  hash: string
+): Promise<MissionVersionDetail> {
+  return apiFetch<MissionVersionDetail>(
+    `${missionsPath(orgId, workspaceId)}/${missionId}/versions/${hash}`
   );
 }
 

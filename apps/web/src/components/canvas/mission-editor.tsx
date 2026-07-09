@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -30,6 +30,7 @@ export interface MissionEditorProps {
   orgId: string;
   workspaceId: string;
   missionId: string;
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 export function MissionEditor(props: MissionEditorProps) {
@@ -51,6 +52,7 @@ function EditorCanvas({
   orgId,
   workspaceId,
   missionId,
+  onDirtyChange,
 }: MissionEditorProps) {
   const editor = useGraphEditor({
     orgId,
@@ -59,6 +61,10 @@ function EditorCanvas({
     initialGraph: graph,
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onDirtyChange?.(editor.dirty);
+  }, [editor.dirty, onDirtyChange]);
 
   const nodesWithErrors = useMemo(
     () =>
