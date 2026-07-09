@@ -20,6 +20,8 @@ interface DeleteDialogProps {
   entityLabel: string;
   name: string;
   onConfirm: () => Promise<void>;
+  actionLabel?: string;
+  pendingLabel?: string;
 }
 
 export function DeleteDialog({
@@ -27,6 +29,8 @@ export function DeleteDialog({
   entityLabel,
   name,
   onConfirm,
+  actionLabel = "Deletar",
+  pendingLabel = "Deletando...",
 }: DeleteDialogProps) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -63,7 +67,7 @@ export function DeleteDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            Deletar {entityLabel} “{name}”?
+            {actionLabel} {entityLabel} “{name}”?
           </AlertDialogTitle>
           <AlertDialogDescription>
             Isso não pode ser desfeito.
@@ -85,7 +89,7 @@ export function DeleteDialog({
             disabled={pending}
             onClick={handleConfirm}
           >
-            {pending ? "Deletando..." : "Deletar"}
+            {pending ? pendingLabel : actionLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

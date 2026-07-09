@@ -29,13 +29,14 @@ type MissionCanvasProps =
 
 export function MissionCanvas(props: MissionCanvasProps) {
   if (props.editable) {
-    const { graph, orgId, workspaceId, missionId } = props;
+    const { graph, orgId, workspaceId, missionId, onDirtyChange } = props;
     return (
       <MissionEditor
         graph={graph}
         orgId={orgId}
         workspaceId={workspaceId}
         missionId={missionId}
+        onDirtyChange={onDirtyChange}
       />
     );
   }

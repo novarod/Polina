@@ -211,7 +211,11 @@ grafo de quest num canvas React Flow — sprites pixel-art por tipo de nó, auto
 quando os nós não têm posição salva, minimap tematizado e painel inspetor de nó. DESIGNER+
 ganha o editor completo: paleta de nós, arrastar/conectar/deletar, edição do `data` em JSON,
 salvar explícito via `PUT /graph`, e as regras do DAG do backend espelhadas no client para
-desenhar os erros de validação ao vivo nos nós.
+desenhar os erros de validação ao vivo nos nós. Publicar fecha o ciclo: um clique compila o
+grafo salvo numa versão com hash de conteúdo (idempotente — conteúdo idêntico nunca cria
+versão nova), a lista de versões expõe cada contrato compilado, e admins da org gerenciam as
+API keys que o plugin UE5 usa para detectar mudanças via
+`GET /engine/missions/:id/active/hash`.
 
 ```bash
 docker compose up -d          # Postgres + API

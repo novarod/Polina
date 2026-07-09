@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { BreadcrumbNav } from "@/components/nav/breadcrumb-nav";
+import { Button } from "@/components/ui/button";
 import { WorkspaceList } from "@/components/workspaces/workspace-list";
+import { roleAtLeast } from "@/lib/roles";
 import { getOrgRole } from "@/services/organizations-server";
 import { serverFetch } from "@/services/server-api";
 import type { Organization } from "@/types/organization";
@@ -29,12 +32,19 @@ export default async function OrgPage({
 
   return (
     <main className="grid content-start gap-6 p-6">
-      <BreadcrumbNav
-        items={[
-          { label: "Organizações", href: "/orgs" },
-          { label: org.name },
-        ]}
-      />
+      <div className="flex items-center justify-between gap-2">
+        <BreadcrumbNav
+          items={[
+            { label: "Organizações", href: "/orgs" },
+            { label: org.name },
+          ]}
+        />
+        {roleAtLeast(role, "ADMIN") && (
+          <Button asChild variant="outline" size="xs" data-testid="api-keys-link">
+            <Link href={`/orgs/${orgId}/api-keys`}>API keys</Link>
+          </Button>
+        )}
+      </div>
       <WorkspaceList orgId={orgId} role={role} workspaces={workspaces} />
     </main>
   );

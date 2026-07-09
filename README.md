@@ -209,7 +209,10 @@ graph in a React Flow canvas — pixel-art node sprites per type, auto-layout (d
 carry no saved position, themed minimap and a node inspector panel. DESIGNER+ gets the full
 editor: node palette, drag/connect/delete, JSON data editing, explicit save to `PUT /graph`,
 and the backend's DAG rules mirrored client-side so validation errors are drawn live on the
-offending nodes.
+offending nodes. Publishing closes the loop: one click compiles the saved graph into a
+content-hashed version (idempotent — identical content never creates a new version), the
+version list exposes each compiled contract, and org admins manage the API keys the UE5
+plugin uses to poll `GET /engine/missions/:id/active/hash` for changes.
 
 ```bash
 docker compose up -d          # Postgres + API
