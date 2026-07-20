@@ -70,7 +70,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: apps/api/go.mod
           cache-dependency-path: apps/api/go.sum
@@ -121,7 +121,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: apps/api/go.mod
           cache-dependency-path: apps/api/go.sum
@@ -186,7 +186,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: apps/api/go.mod
           cache-dependency-path: apps/api/go.sum
@@ -212,7 +212,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: apps/api/go.mod
           cache-dependency-path: apps/api/go.sum
@@ -245,7 +245,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: apps/api/go.mod
           cache-dependency-path: apps/api/go.sum
@@ -307,7 +307,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: apps/api/go.mod
           cache-dependency-path: apps/api/go.sum
