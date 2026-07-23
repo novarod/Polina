@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 
 import { MissionCanvas } from "@/components/canvas/mission-canvas";
 import { MissionStatusBadge } from "@/components/missions/mission-status-badge";
+import { PresenceAvatars } from "@/components/missions/presence-avatars";
 import { PublishButton } from "@/components/missions/publish-button";
 import { VersionList } from "@/components/missions/version-list";
+import { useMissionPresence } from "@/hooks/use-mission-presence";
 import { toEditorGraph } from "@/lib/graph-layout";
 import type { Mission, MissionVersion } from "@/types/mission";
 
@@ -26,6 +28,16 @@ export function MissionView({
 }: MissionViewProps) {
   const [dirty, setDirty] = useState(false);
   const graph = useMemo(() => toEditorGraph(mission.graph), [mission.graph]);
+  const { users, peers, subscribeCursor, sendPos } = useMissionPresence({
+    orgId,
+    workspaceId,
+    missionId: mission.id,
+    editing: canEdit,
+  });
+  const presence = useMemo(
+    () => ({ peers, subscribeCursor, sendPos }),
+    [peers, subscribeCursor, sendPos]
+  );
 
   return (
     <>
@@ -33,6 +45,7 @@ export function MissionView({
         <div className="flex items-center gap-3">
           <h1 className="font-display text-sm">{mission.name}</h1>
           <MissionStatusBadge status={mission.status} />
+          <PresenceAvatars users={users} />
           {canEdit && (
             <div className="ml-auto">
               <PublishButton
@@ -62,9 +75,10 @@ export function MissionView({
           workspaceId={workspaceId}
           missionId={mission.id}
           onDirtyChange={setDirty}
+          presence={presence}
         />
       ) : (
-        <MissionCanvas graph={graph} />
+        <MissionCanvas graph={graph} presence={presence} />
       )}
       <VersionList
         orgId={orgId}

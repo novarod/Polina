@@ -16,20 +16,23 @@ import {
   type MissionEditorProps,
 } from "@/components/canvas/mission-editor";
 import { NodePanel, type SelectedNode } from "@/components/canvas/node-panel";
+import { PresenceCursors } from "@/components/canvas/presence-cursors";
 import { QuestNode } from "@/components/canvas/quest-node";
 import { useMounted } from "@/hooks/use-mounted";
 import { layoutGraph, type QuestFlowNode } from "@/lib/graph-layout";
 import type { EditorGraph } from "@/types/graph";
+import type { CanvasPresence } from "@/types/realtime";
 
 const nodeTypes = { quest: QuestNode };
 
 type MissionCanvasProps =
-  | { editable?: false; graph: EditorGraph }
+  | { editable?: false; graph: EditorGraph; presence?: CanvasPresence }
   | ({ editable: true } & MissionEditorProps);
 
 export function MissionCanvas(props: MissionCanvasProps) {
   if (props.editable) {
-    const { graph, orgId, workspaceId, missionId, onDirtyChange } = props;
+    const { graph, orgId, workspaceId, missionId, onDirtyChange, presence } =
+      props;
     return (
       <MissionEditor
         graph={graph}
@@ -37,13 +40,20 @@ export function MissionCanvas(props: MissionCanvasProps) {
         workspaceId={workspaceId}
         missionId={missionId}
         onDirtyChange={onDirtyChange}
+        presence={presence}
       />
     );
   }
-  return <ReadOnlyCanvas graph={props.graph} />;
+  return <ReadOnlyCanvas graph={props.graph} presence={props.presence} />;
 }
 
-function ReadOnlyCanvas({ graph }: { graph: EditorGraph }) {
+function ReadOnlyCanvas({
+  graph,
+  presence,
+}: {
+  graph: EditorGraph;
+  presence?: CanvasPresence;
+}) {
   const { nodes, edges } = useMemo(() => layoutGraph(graph), [graph]);
   const [selected, setSelected] = useState<SelectedNode | null>(null);
   const mounted = useMounted();
@@ -107,6 +117,7 @@ function ReadOnlyCanvas({ graph }: { graph: EditorGraph }) {
           maskColor="color-mix(in oklch, var(--background) 60%, transparent)"
         />
         <Controls showInteractive={false} />
+        {presence && <PresenceCursors {...presence} />}
       </ReactFlow>
       <NodePanel node={selected} onClose={onPaneClick} />
     </div>

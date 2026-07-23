@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -25,17 +26,19 @@ import (
 	appengine "github.com/novarod/polina/apps/api/internal/application/engine"
 	appmission "github.com/novarod/polina/apps/api/internal/application/mission"
 	apporg "github.com/novarod/polina/apps/api/internal/application/organization"
+	"github.com/novarod/polina/apps/api/internal/application/realtime"
 	appws "github.com/novarod/polina/apps/api/internal/application/workspace"
 )
 
 const maxRequestBody = "1M"
 
 const (
-	readHeaderTimeout = 5 * time.Second
-	readTimeout       = 10 * time.Second
-	writeTimeout      = 30 * time.Second
-	idleTimeout       = 60 * time.Second
-	requestTimeout    = 15 * time.Second
+	readHeaderTimeout    = 5 * time.Second
+	readTimeout          = 10 * time.Second
+	writeTimeout         = 30 * time.Second
+	idleTimeout          = 60 * time.Second
+	requestTimeout       = 15 * time.Second
+	realtimeDrainTimeout = 5 * time.Second
 )
 
 type Config struct {
@@ -55,6 +58,7 @@ type Config struct {
 type Server struct {
 	echo    *echo.Echo
 	pool    *pgxpool.Pool
+	hub     *realtime.Hub
 	port    string
 	closers []func()
 }
@@ -133,6 +137,8 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	missionVersionHandler := handler.NewMissionVersionHandler(publishMissionUC, listVersionsUC, getVersionUC)
 	apiKeyHandler := handler.NewAPIKeyHandler(createAPIKeyUC, listAPIKeyUC, revokeAPIKeyUC)
 	engineHandler := handler.NewEngineHandler(engineHashUC, engineContractUC)
+	hub := realtime.NewHub()
+	realtimeHandler := handler.NewRealtimeHandler(hub, userRepo, memberRepo, missionRepo, cfg.JWTSecret, cfg.FrontendURL)
 
 	e := echo.New()
 	e.HideBanner = true
@@ -143,7 +149,10 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 
 	// Global middleware
 	useObservability(e, logger)
-	e.Use(echomiddleware.ContextTimeout(requestTimeout))
+	e.Use(echomiddleware.ContextTimeoutWithConfig(echomiddleware.ContextTimeoutConfig{
+		Skipper: skipRealtime,
+		Timeout: requestTimeout,
+	}))
 	e.Use(echomiddleware.BodyLimit(maxRequestBody))
 	e.Use(echomiddleware.CORSWithConfig(echomiddleware.CORSConfig{
 		AllowOrigins:     []string{cfg.FrontendURL},
@@ -209,6 +218,11 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	engine.GET("/missions/:missionID/active/hash", engineHandler.ActiveHash)
 	engine.GET("/missions/:missionID/active", engineHandler.ActiveContract)
 
+	// Realtime routes (WS upgrade authenticates via cookie or first-frame ticket)
+	rt := e.Group("/realtime")
+	rt.GET("/ticket", realtimeHandler.Ticket, authMW)
+	rt.GET("/ws", realtimeHandler.Connect, httpmw.AuthOptional(cfg.JWTSecret, userRepo))
+
 	// Health
 	e.GET("/health", health)
 
@@ -220,9 +234,14 @@ func New(ctx context.Context, cfg Config) (*Server, error) {
 	return &Server{
 		echo:    e,
 		pool:    pool,
+		hub:     hub,
 		port:    cfg.Port,
 		closers: []func(){authThrottleStop, registerThrottleStop, loginThrottleStop, engineThrottleStop},
 	}, nil
+}
+
+func skipRealtime(c echo.Context) bool {
+	return strings.HasPrefix(c.Path(), "/realtime")
 }
 
 // @Summary  Health check
@@ -286,6 +305,7 @@ func useObservability(e *echo.Echo, logger *slog.Logger) {
 	})
 	registry.MustRegister(panicsRecovered)
 	e.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
+		Skipper:    skipRealtime,
 		Subsystem:  "polina_api",
 		Registerer: registry,
 	}))
@@ -313,6 +333,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	s.hub.Close(realtimeDrainTimeout)
 	return s.echo.Shutdown(ctx)
 }
 

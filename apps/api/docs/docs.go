@@ -1616,6 +1616,65 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/realtime/ticket": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "realtime"
+                ],
+                "summary": "Issue a short-lived ticket for realtime WebSocket auth",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_adapters_http_handler.realtimeTicketResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/realtime/ws": {
+            "get": {
+                "description": "Upgrades to WebSocket. Authenticates via session cookie or a first ` + "`" + `{\"type\":\"auth\",\"ticket\":...}` + "`" + ` frame.",
+                "tags": [
+                    "realtime"
+                ],
+                "summary": "Realtime presence WebSocket (cursors, avatars, editing status)",
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -1878,6 +1937,14 @@ const docTemplate = `{
                 },
                 "version": {
                     "type": "integer"
+                }
+            }
+        },
+        "internal_adapters_http_handler.realtimeTicketResponse": {
+            "type": "object",
+            "properties": {
+                "ticket": {
+                    "type": "string"
                 }
             }
         },

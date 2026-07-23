@@ -15,6 +15,7 @@ import { XIcon } from "lucide-react";
 
 import { NodePalette } from "@/components/canvas/node-palette";
 import { NodePanel } from "@/components/canvas/node-panel";
+import { PresenceCursors } from "@/components/canvas/presence-cursors";
 import { QuestNode } from "@/components/canvas/quest-node";
 import { SaveBar } from "@/components/canvas/save-bar";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { useGraphEditor } from "@/hooks/use-graph-editor";
 import { useMounted } from "@/hooks/use-mounted";
 import type { QuestFlowNode } from "@/lib/graph-layout";
 import type { EditorGraph } from "@/types/graph";
+import type { CanvasPresence } from "@/types/realtime";
 
 const nodeTypes = { quest: QuestNode };
 
@@ -31,6 +33,7 @@ export interface MissionEditorProps {
   workspaceId: string;
   missionId: string;
   onDirtyChange?: (dirty: boolean) => void;
+  presence?: CanvasPresence;
 }
 
 export function MissionEditor(props: MissionEditorProps) {
@@ -53,6 +56,7 @@ function EditorCanvas({
   workspaceId,
   missionId,
   onDirtyChange,
+  presence,
 }: MissionEditorProps) {
   const editor = useGraphEditor({
     orgId,
@@ -134,6 +138,7 @@ function EditorCanvas({
           maskColor="color-mix(in oklch, var(--background) 60%, transparent)"
         />
         <Controls showInteractive={false} />
+        {presence && <PresenceCursors {...presence} />}
         <Panel position="top-left">
           <NodePalette hasStart={editor.hasStart} onAdd={editor.addNode} />
         </Panel>
