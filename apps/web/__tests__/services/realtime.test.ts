@@ -144,7 +144,6 @@ describe("realtimeClient", () => {
     socket.message({ type: "hello", v: 1, user: { id: "me", name: "Eu" } });
 
     expect(seen).toEqual(["me"]);
-    expect(client.getSelf()?.id).toBe("me");
 
     const late: string[] = [];
     client.onSelf((user) => late.push(user.id));

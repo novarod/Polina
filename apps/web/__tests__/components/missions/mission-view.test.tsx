@@ -7,6 +7,16 @@ import type { Mission } from "@/types/mission";
 
 vi.mock("@/services/missions");
 
+vi.mock("@/services/realtime", () => ({
+  realtimeClient: {
+    subscribeMissionPos: vi.fn(() => () => {}),
+    subscribeOrgStatus: vi.fn(() => () => {}),
+    onSelf: vi.fn(() => () => {}),
+    sendPos: vi.fn(),
+    setEditing: vi.fn(),
+  },
+}));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));

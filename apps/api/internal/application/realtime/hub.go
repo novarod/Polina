@@ -10,9 +10,8 @@ import (
 )
 
 const (
-	CloseGoingAway       = 1001
-	ClosePolicyViolation = 1008
-	CloseTryAgainLater   = 1013
+	CloseGoingAway     = 1001
+	CloseTryAgainLater = 1013
 )
 
 const (

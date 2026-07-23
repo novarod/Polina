@@ -72,10 +72,6 @@ class RealtimeClient {
     };
   }
 
-  getSelf(): PresenceUser | null {
-    return this.self;
-  }
-
   sendPos(missionId: string, x: number, y: number): void {
     this.sendFrame({ type: "pos", mission_id: missionId, x, y });
   }
@@ -119,7 +115,12 @@ class RealtimeClient {
     }
     subscription.refCount++;
     subscription.listeners.add(listener);
+    let active = true;
     return () => {
+      if (!active) {
+        return;
+      }
+      active = false;
       subscription.listeners.delete(listener);
       subscription.refCount--;
       if (subscription.refCount > 0) {

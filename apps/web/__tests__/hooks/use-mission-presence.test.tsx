@@ -8,7 +8,6 @@ const client = vi.hoisted(() => ({
   subscribeMissionPos: vi.fn(),
   subscribeOrgStatus: vi.fn(),
   onSelf: vi.fn(),
-  getSelf: vi.fn(),
   sendPos: vi.fn(),
   setEditing: vi.fn(),
 }));

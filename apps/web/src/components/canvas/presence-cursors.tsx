@@ -32,31 +32,43 @@ export function PresenceCursors({
     }
     let lastSent = 0;
     let raf = 0;
+    let trailing: ReturnType<typeof setTimeout> | null = null;
     let pending: { x: number; y: number } | null = null;
-    const handler = (event: PointerEvent) => {
-      pending = { x: event.clientX, y: event.clientY };
-      if (raf) {
+    const flush = () => {
+      raf = 0;
+      if (!pending) {
         return;
       }
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        if (!pending) {
-          return;
-        }
-        const now = performance.now();
-        if (now - lastSent < SEND_INTERVAL_MS) {
-          return;
-        }
-        lastSent = now;
-        const point = screenToFlowPosition(pending);
-        sendPos(point.x, point.y);
-      });
+      const now = performance.now();
+      const elapsed = now - lastSent;
+      if (elapsed < SEND_INTERVAL_MS) {
+        trailing ??= setTimeout(() => {
+          trailing = null;
+          if (!raf) {
+            raf = requestAnimationFrame(flush);
+          }
+        }, SEND_INTERVAL_MS - elapsed);
+        return;
+      }
+      lastSent = now;
+      const point = screenToFlowPosition(pending);
+      pending = null;
+      sendPos(point.x, point.y);
+    };
+    const handler = (event: PointerEvent) => {
+      pending = { x: event.clientX, y: event.clientY };
+      if (!raf) {
+        raf = requestAnimationFrame(flush);
+      }
     };
     domNode.addEventListener("pointermove", handler);
     return () => {
       domNode.removeEventListener("pointermove", handler);
       if (raf) {
         cancelAnimationFrame(raf);
+      }
+      if (trailing) {
+        clearTimeout(trailing);
       }
     };
   }, [domNode, screenToFlowPosition, sendPos]);

@@ -94,6 +94,33 @@ test("badge 'editando' aparece na lista, deduplica abas e some ao sair", async (
   });
 });
 
+test("reconnect: snapshot substitui o estado sem avatar fantasma", async ({
+  page,
+  sessionToken,
+}) => {
+  const seeded = await seedMission(sessionToken, simpleGraph);
+
+  const serverSockets: Array<{ close: () => Promise<void> }> = [];
+  await page.routeWebSocket("**/api/realtime/ws", (ws) => {
+    const server = ws.connectToServer();
+    ws.onMessage((message) => server.send(message));
+    server.onMessage((message) => ws.send(message));
+    server.onClose(() => void ws.close());
+    serverSockets.push(server);
+  });
+
+  await page.goto(seeded.path);
+  await expect(page.getByTestId("presence-avatar")).toHaveCount(1);
+  expect(serverSockets).toHaveLength(1);
+
+  await serverSockets[0].close();
+  await expect
+    .poll(() => serverSockets.length, { timeout: 15_000 })
+    .toBeGreaterThan(1);
+
+  await expect(page.getByTestId("presence-avatar")).toHaveCount(1);
+});
+
 test("presença deduplicada: duas abas do mesmo usuário mostram um avatar só", async ({
   page,
   browser,
