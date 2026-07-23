@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useOrgStatus } from "@/hooks/use-org-status";
 import { roleAtLeast, type Role } from "@/lib/roles";
 import { deleteMission } from "@/services/missions";
 import type { Mission } from "@/types/mission";
@@ -35,6 +36,7 @@ export function MissionList({
 }: MissionListProps) {
   const router = useRouter();
   const canEdit = roleAtLeast(role, "DESIGNER");
+  const editingCounts = useOrgStatus(orgId);
 
   return (
     <div className="grid gap-4">
@@ -63,7 +65,17 @@ export function MissionList({
                     <CardTitle className="truncate hover:text-primary">
                       {mission.name}
                     </CardTitle>
-                    <MissionStatusBadge status={mission.status} />
+                    <div className="flex items-center gap-2">
+                      <MissionStatusBadge status={mission.status} />
+                      {(editingCounts[mission.id] ?? 0) > 0 && (
+                        <span
+                          data-testid="editing-badge"
+                          className="rounded-sm border-2 border-primary px-1.5 py-0.5 font-display text-[8px] text-primary"
+                        >
+                          {editingCounts[mission.id]} editando
+                        </span>
+                      )}
+                    </div>
                     {mission.description && (
                       <CardDescription className="line-clamp-2">
                         {mission.description}

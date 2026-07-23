@@ -175,6 +175,11 @@ definitions:
       version:
         type: integer
     type: object
+  internal_adapters_http_handler.realtimeTicketResponse:
+    properties:
+      ticket:
+        type: string
+    type: object
   internal_adapters_http_handler.updateMissionRequest:
     properties:
       description:
@@ -1270,6 +1275,44 @@ paths:
       summary: Get a mission version (by hash)
       tags:
       - missions
+  /realtime/ticket:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_adapters_http_handler.realtimeTicketResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Issue a short-lived ticket for realtime WebSocket auth
+      tags:
+      - realtime
+  /realtime/ws:
+    get:
+      description: Upgrades to WebSocket. Authenticates via session cookie or a first
+        `{"type":"auth","ticket":...}` frame.
+      responses:
+        "101":
+          description: Switching Protocols
+          schema:
+            type: string
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Realtime presence WebSocket (cursors, avatars, editing status)
+      tags:
+      - realtime
 securityDefinitions:
   ApiKeyAuth:
     in: header

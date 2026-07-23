@@ -55,6 +55,12 @@
   --input: oklch(0.84 0.03 85);
   --ring: oklch(0.55 0.14 150);
   --radius: 0.25rem;
+  --presence-1: oklch(0.55 0.18 25);
+  --presence-2: oklch(0.52 0.14 250);
+  --presence-3: oklch(0.55 0.12 150);
+  --presence-4: oklch(0.6 0.13 85);
+  --presence-5: oklch(0.5 0.16 310);
+  --presence-6: oklch(0.55 0.13 195);
 }
 
 .dark {
@@ -76,6 +82,12 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.72 0.16 150);
+  --presence-1: oklch(0.7 0.17 25);
+  --presence-2: oklch(0.7 0.13 250);
+  --presence-3: oklch(0.72 0.14 150);
+  --presence-4: oklch(0.76 0.13 85);
+  --presence-5: oklch(0.7 0.15 310);
+  --presence-6: oklch(0.72 0.12 195);
 }
 
 @layer base {
